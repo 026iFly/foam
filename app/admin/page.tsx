@@ -61,10 +61,10 @@ export default function AdminPage() {
       const pricingData = await pricingRes.json();
       const costVarsData = await costVarsRes.json();
 
-      setPricing(pricingData.pricing);
-      setAdditionalCosts(pricingData.additionalCosts);
-      setMultipliers(pricingData.multipliers);
-      setCostVariables(costVarsData.variables);
+      setPricing(pricingData.pricing || []);
+      setAdditionalCosts(pricingData.additionalCosts || []);
+      setMultipliers(pricingData.multipliers || []);
+      setCostVariables(costVarsData.variables || []);
       setLoading(false);
     } catch (err) {
       console.error('Failed to load data:', err);
