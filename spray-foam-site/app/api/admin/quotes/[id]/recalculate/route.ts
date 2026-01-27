@@ -1,0 +1,320 @@
+import { NextResponse } from 'next/server';
+import { isAuthenticated } from '@/lib/session';
+import { getQuoteRequest } from '@/lib/quotes';
+import { supabase } from '@/lib/supabase';
+import {
+  analyzeCondensationRisk,
+  calculateMinClosedCellThickness,
+  FOAM_PROPERTIES,
+  BBR_U_VALUES,
+} from '@/lib/foam-calculations';
+import type { CalculationData, BuildingPartRecommendation } from '@/lib/types/quote';
+
+interface CostVariables {
+  [key: string]: number;
+}
+
+async function getCostVariables(): Promise<CostVariables> {
+  const { data, error } = await supabase
+    .from('cost_variables')
+    .select('variable_key, variable_value');
+
+  if (error) {
+    console.error('Error fetching cost variables:', error);
+    throw error;
+  }
+
+  const vars: CostVariables = {};
+  for (const v of data || []) {
+    vars[v.variable_key] = v.variable_value;
+  }
+  return vars;
+}
+
+interface RecalculatePartInput {
+  partId: string;
+  partName: string;
+  partType: string;
+  area: number;
+  hasVaporBarrier: boolean;
+  closedCellThickness: number;
+  openCellThickness: number;
+}
+
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  if (!await isAuthenticated()) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const { id } = await params;
+    const quote = await getQuoteRequest(parseInt(id));
+
+    if (!quote) {
+      return NextResponse.json({ error: 'Offert ej hittad' }, { status: 404 });
+    }
+
+    const body = await request.json();
+    const { parts, climate, options } = body as {
+      parts: RecalculatePartInput[];
+      climate: {
+        zone: string;
+        indoorTemp: number;
+        indoorRH: number;
+        outdoorTemp: number;
+      };
+      options: {
+        hasThreePhase: boolean;
+        applyRotDeduction: boolean;
+        customerAddress: string;
+      };
+    };
+
+    // Get cost variables from database
+    const vars = await getCostVariables();
+
+    // Process each part
+    const recalculatedParts: BuildingPartRecommendation[] = [];
+    let totalClosedCellKg = 0;
+    let totalOpenCellKg = 0;
+    let totalMaterialCost = 0;
+    let totalSprayHours = 0;
+
+    for (const part of parts) {
+      const closedThickness = part.closedCellThickness;
+      const openThickness = part.openCellThickness;
+      const totalThickness = closedThickness + openThickness;
+
+      // Calculate closed cell
+      let closedCellKg = 0;
+      let closedCellCost = 0;
+      let closedSprayHours = 0;
+
+      if (closedThickness > 0) {
+        const closedVolume = (part.area * closedThickness) / 1000;
+        closedCellKg = closedVolume * vars.closed_density;
+        const closedMaterialCost = closedCellKg * vars.closed_material_cost;
+        closedCellCost = closedMaterialCost * (1 + vars.closed_margin / 100);
+        closedSprayHours = closedVolume * vars.closed_spray_time;
+      }
+
+      // Calculate open cell
+      let openCellKg = 0;
+      let openCellCost = 0;
+      let openSprayHours = 0;
+
+      if (openThickness > 0) {
+        const openVolume = (part.area * openThickness) / 1000;
+        openCellKg = openVolume * vars.open_density;
+        const openMaterialCost = openCellKg * vars.open_material_cost;
+        openCellCost = openMaterialCost * (1 + vars.open_margin / 100);
+        openSprayHours = openVolume * vars.open_spray_time;
+      }
+
+      const materialCost = closedCellCost + openCellCost;
+      const sprayHours = closedSprayHours + openSprayHours;
+
+      // Accumulate totals
+      totalClosedCellKg += closedCellKg;
+      totalOpenCellKg += openCellKg;
+      totalMaterialCost += materialCost;
+      totalSprayHours += sprayHours;
+
+      // Determine config type
+      let configType: 'closed_only' | 'open_only' | 'flash_and_batt' = 'closed_only';
+      if (closedThickness > 0 && openThickness > 0) {
+        configType = 'flash_and_batt';
+      } else if (openThickness > 0) {
+        configType = 'open_only';
+      }
+
+      // Check if it's an inner wall (no condensation risk analysis needed)
+      const isInnerWall = part.partType === 'innervagg' ||
+        (climate.indoorTemp === climate.outdoorTemp);
+
+      // Calculate condensation analysis
+      let condensationAnalysis = undefined;
+      let condensationRisk: 'low' | 'medium' | 'high' | 'unknown' = 'unknown';
+
+      if (!isInnerWall) {
+        // For flash-and-batt, analyze the closed cell layer
+        const analysisThickness = configType === 'flash_and_batt'
+          ? closedThickness
+          : totalThickness;
+
+        const foamType = configType === 'open_only' ? 'open_cell' : 'closed_cell';
+
+        const riskAnalysis = analyzeCondensationRisk({
+          indoorTemp: climate.indoorTemp,
+          outdoorTemp: climate.outdoorTemp,
+          indoorRH: climate.indoorRH,
+          insulationThickness: analysisThickness,
+          foamType,
+          hasVaporBarrier: part.hasVaporBarrier,
+        });
+
+        // Calculate temperature at interface for flash-and-batt
+        let tempAtInterface = climate.outdoorTemp;
+        let safetyMargin = 0;
+
+        if (configType === 'flash_and_batt' || configType === 'closed_only') {
+          const minCalc = calculateMinClosedCellThickness({
+            T_in: climate.indoorTemp,
+            RH_in: climate.indoorRH,
+            T_out: climate.outdoorTemp,
+            openCellThickness: openThickness,
+          });
+
+          // Calculate actual temperature at the closed/open interface
+          const R_out_film = 0.04;
+          const R_ext_fixed = 0.12;
+          const R_closed = (closedThickness / 1000) / FOAM_PROPERTIES.closed_cell.lambda;
+          const R_open = (openThickness / 1000) / FOAM_PROPERTIES.open_cell.lambda;
+          const R_int_fixed = 0.06;
+          const R_in_film = 0.13;
+          const R_total = R_out_film + R_ext_fixed + R_closed + R_open + R_int_fixed + R_in_film;
+
+          tempAtInterface = climate.outdoorTemp +
+            ((R_out_film + R_ext_fixed + R_closed) / R_total) *
+            (climate.indoorTemp - climate.outdoorTemp);
+
+          safetyMargin = tempAtInterface - minCalc.T_dew;
+        }
+
+        condensationRisk = riskAnalysis.risk;
+        condensationAnalysis = {
+          risk: riskAnalysis.risk,
+          dewPointInside: riskAnalysis.dewPointInside,
+          tempAtInterface,
+          explanation: riskAnalysis.explanation,
+          safetyMargin,
+        };
+      }
+
+      // Calculate U-value
+      const R_closed = closedThickness > 0
+        ? (closedThickness / 1000) / FOAM_PROPERTIES.closed_cell.lambda
+        : 0;
+      const R_open = openThickness > 0
+        ? (openThickness / 1000) / FOAM_PROPERTIES.open_cell.lambda
+        : 0;
+      const R_total = R_closed + R_open + 0.17; // Add surface resistances
+      const actualUValue = R_total > 0 ? 1 / R_total : 0;
+
+      // Get required U-value for the building part type
+      const partTypeKey = part.partType === 'tak' ? 'tak' :
+        part.partType === 'yttervagg' ? 'yttervagg' :
+        part.partType === 'golv' ? 'golv' : 'tak';
+      const requiredUValue = BBR_U_VALUES[partTypeKey as keyof typeof BBR_U_VALUES] || 0.13;
+      const meetsUValue = actualUValue <= requiredUValue;
+
+      recalculatedParts.push({
+        partId: part.partId,
+        partName: part.partName,
+        partType: part.partType,
+        area: part.area,
+        hasVaporBarrier: part.hasVaporBarrier,
+        targetThickness: totalThickness,
+        closedCellThickness: closedThickness,
+        openCellThickness: openThickness,
+        totalThickness,
+        closedCellKg: Math.round(closedCellKg * 10) / 10,
+        openCellKg: Math.round(openCellKg * 10) / 10,
+        closedCellCost: Math.round(closedCellCost),
+        openCellCost: Math.round(openCellCost),
+        materialCost: Math.round(materialCost),
+        laborHours: Math.round(sprayHours * 10) / 10,
+        laborCost: 0, // Will be calculated below
+        totalCost: 0, // Will be calculated below
+        condensationRisk,
+        meetsUValue,
+        actualUValue: Math.round(actualUValue * 100) / 100,
+        requiredUValue,
+        configType,
+        configExplanation: configType === 'closed_only' ? 'Endast slutencell' :
+          configType === 'open_only' ? 'Endast öppencell' : 'Flash & Batt',
+        condensationAnalysis,
+      });
+    }
+
+    // Calculate shared costs
+    const setupHours = vars.setup_hours || 2;
+    const travelHours = 0; // Would need distance calculation
+    const switchingHours = recalculatedParts.filter(p => p.configType === 'flash_and_batt').length * 1.0;
+    const totalLaborHours = totalSprayHours + setupHours + travelHours + switchingHours;
+    const totalLaborCost = totalLaborHours * vars.personnel_cost_per_hour;
+
+    // Distribute labor cost proportionally to spray hours
+    for (const part of recalculatedParts) {
+      const laborShare = totalSprayHours > 0
+        ? (part.laborHours / totalSprayHours) * totalLaborCost
+        : 0;
+      part.laborCost = Math.round(laborShare);
+      part.totalCost = part.materialCost + part.laborCost;
+    }
+
+    // Calculate totals
+    const generatorCost = options.hasThreePhase ? 0 : (vars.generator_cost || 0);
+
+    // Try to preserve travel cost and distance from original data
+    const originalData: CalculationData | null = quote.adjusted_data
+      ? JSON.parse(quote.adjusted_data)
+      : quote.calculation_data
+        ? JSON.parse(quote.calculation_data)
+        : null;
+
+    const preservedTravelCost = originalData?.totals.travelCost || 0;
+    const preservedDistanceKm = originalData?.totals.distanceKm || 0;
+    const preservedTravelHours = originalData?.totals.travelHours || 0;
+
+    const totalExclVat = Math.round(totalMaterialCost + totalLaborCost + preservedTravelCost + generatorCost);
+    const vat = Math.round(totalExclVat * 0.25);
+    const totalInclVat = totalExclVat + vat;
+
+    // ROT deduction (30% of labor cost incl VAT)
+    const laborCostInclVat = totalLaborCost * 1.25;
+    const rotDeduction = options.applyRotDeduction ? Math.round(laborCostInclVat * 0.30) : 0;
+    const finalTotal = totalInclVat - rotDeduction;
+
+    const recalculatedData: CalculationData = {
+      recommendations: recalculatedParts,
+      climate,
+      options,
+      totals: {
+        totalArea: recalculatedParts.reduce((sum, p) => sum + p.area, 0),
+        totalClosedCellKg: Math.round(totalClosedCellKg * 10) / 10,
+        totalOpenCellKg: Math.round(totalOpenCellKg * 10) / 10,
+        materialCostTotal: Math.round(totalMaterialCost),
+        laborCostTotal: Math.round(totalLaborCost),
+        travelCost: preservedTravelCost,
+        generatorCost,
+        totalExclVat,
+        vat,
+        totalInclVat,
+        rotDeduction,
+        finalTotal,
+        sprayHours: Math.round(totalSprayHours * 10) / 10,
+        setupHours,
+        travelHours: preservedTravelHours,
+        switchingHours,
+        totalHours: Math.round((totalSprayHours + setupHours + preservedTravelHours + switchingHours) * 10) / 10,
+        distanceKm: preservedDistanceKm,
+      },
+      timestamp: Date.now(),
+    };
+
+    return NextResponse.json({
+      success: true,
+      data: recalculatedData,
+    });
+  } catch (error) {
+    console.error('Error recalculating quote:', error);
+    return NextResponse.json(
+      { error: 'Ett fel uppstod vid omräkning' },
+      { status: 500 }
+    );
+  }
+}
