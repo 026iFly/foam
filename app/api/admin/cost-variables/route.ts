@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ variables });
+    return NextResponse.json({ variables: variables || [] });
   } catch (error) {
     console.error('Error fetching cost variables:', error);
     return NextResponse.json(
