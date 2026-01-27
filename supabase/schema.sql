@@ -175,27 +175,33 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Triggers for updated_at
+-- Triggers for updated_at (drop first to allow re-running)
+DROP TRIGGER IF EXISTS update_company_info_updated_at ON company_info;
 CREATE TRIGGER update_company_info_updated_at
   BEFORE UPDATE ON company_info
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_cost_variables_updated_at ON cost_variables;
 CREATE TRIGGER update_cost_variables_updated_at
   BEFORE UPDATE ON cost_variables
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_quote_requests_updated_at ON quote_requests;
 CREATE TRIGGER update_quote_requests_updated_at
   BEFORE UPDATE ON quote_requests
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_pricing_config_updated_at ON pricing_config;
 CREATE TRIGGER update_pricing_config_updated_at
   BEFORE UPDATE ON pricing_config
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_additional_costs_updated_at ON additional_costs;
 CREATE TRIGGER update_additional_costs_updated_at
   BEFORE UPDATE ON additional_costs
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_project_multipliers_updated_at ON project_multipliers;
 CREATE TRIGGER update_project_multipliers_updated_at
   BEFORE UPDATE ON project_multipliers
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
