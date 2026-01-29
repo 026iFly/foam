@@ -345,10 +345,6 @@ export const QuoteDocument = ({
             ) : (
               <Text style={styles.companyName}>{companyInfo.name}</Text>
             )}
-            <Text style={styles.companyInfo}>
-              {companyInfo.address} | {companyInfo.phone} | {companyInfo.email}
-            </Text>
-            <Text style={styles.companyInfo}>Org.nr: {companyInfo.orgNumber}</Text>
           </View>
         </View>
 
@@ -514,7 +510,10 @@ export const QuoteDocument = ({
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            {companyInfo.name} | Org.nr: {companyInfo.orgNumber} | {companyInfo.email} | {companyInfo.phone}
+            {companyInfo.name} | Intelliray AB | Org.nr: 559374-0995 | Godkänd för F-skatt
+          </Text>
+          <Text style={styles.footerText}>
+            {companyInfo.phone} | {companyInfo.email}
           </Text>
         </View>
       </Page>
@@ -597,7 +596,10 @@ export const QuoteDocument = ({
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            {companyInfo.name} | Org.nr: {companyInfo.orgNumber} | {companyInfo.email} | {companyInfo.phone}
+            {companyInfo.name} | Intelliray AB | Org.nr: 559374-0995 | Godkänd för F-skatt
+          </Text>
+          <Text style={styles.footerText}>
+            {companyInfo.phone} | {companyInfo.email}
           </Text>
         </View>
       </Page>
