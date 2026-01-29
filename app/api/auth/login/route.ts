@@ -1,55 +1,65 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/session';
-import bcrypt from 'bcrypt';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, password } = await request.json();
+    const { email, password } = await request.json();
 
-    // Get credentials from environment variables
-    const adminUsername = process.env.ADMIN_USERNAME || 'admin';
-    const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH;
-
-    console.log('Login attempt:', { username, hasPassword: !!password });
-    console.log('Expected username:', adminUsername);
-    console.log('Has hash:', !!adminPasswordHash);
-
-    if (!adminPasswordHash) {
+    if (!email || !password) {
       return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
+        { error: 'E-post och lösenord krävs' },
+        { status: 400 }
       );
     }
 
-    // Check username
-    if (username !== adminUsername) {
-      console.log('Username mismatch');
+    const cookieStore = await cookies();
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+          },
+        },
+      }
+    );
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      console.error('Login error:', error.message);
       return NextResponse.json(
-        { error: 'Ogiltigt användarnamn eller lösenord' },
+        { error: 'Ogiltig e-post eller lösenord' },
         { status: 401 }
       );
     }
 
-    // Verify password
-    console.log('Comparing password with hash...');
-    const passwordMatch = await bcrypt.compare(password, adminPasswordHash);
-    console.log('Password match:', passwordMatch);
+    // Get user profile
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', data.user.id)
+      .single();
 
-    if (!passwordMatch) {
-      return NextResponse.json(
-        { error: 'Ogiltigt användarnamn eller lösenord' },
-        { status: 401 }
-      );
-    }
-
-    // Set session
-    const session = await getSession();
-    session.userId = '1';
-    session.username = username;
-    session.isLoggedIn = true;
-    await session.save();
-
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+        profile,
+      },
+    });
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(

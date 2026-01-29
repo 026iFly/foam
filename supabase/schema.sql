@@ -237,3 +237,143 @@ INSERT INTO faqs (question, answer, category, sort_order) VALUES
   ('Vilka certifieringar krävs för sprayisolering i Sverige?', 'I Sverige krävs certifiering enligt EU:s REACH-förordning för hantering av diisocyanater. Våra tekniker är fullt certifierade och följer alla Boverkets byggregler (BBR) samt Arbetsmiljöverkets föreskrifter (AFS).', 'Certifiering', 5),
   ('Var kan sprayisolering användas?', 'Sprayisolering är mångsidig och kan användas i vindar, källare, krypgrund, väggar, tak, och industribyggnader. Den fungerar utmärkt både i nybyggnation och renovering.', 'Användning', 6)
 ON CONFLICT DO NOTHING;
+
+-- =====================================================
+-- USER PROFILES TABLE (for Supabase Auth integration)
+-- =====================================================
+
+-- User profiles table linked to Supabase Auth
+CREATE TABLE IF NOT EXISTS user_profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  first_name TEXT,
+  last_name TEXT,
+  phone TEXT,
+  role TEXT NOT NULL DEFAULT 'installer' CHECK (role IN ('admin', 'installer')),
+  profile_photo_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Index for email lookups
+CREATE INDEX IF NOT EXISTS idx_user_profiles_email ON user_profiles(email);
+CREATE INDEX IF NOT EXISTS idx_user_profiles_role ON user_profiles(role);
+
+-- Trigger for updated_at
+DROP TRIGGER IF EXISTS update_user_profiles_updated_at ON user_profiles;
+CREATE TRIGGER update_user_profiles_updated_at
+  BEFORE UPDATE ON user_profiles
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================
+-- ROW LEVEL SECURITY FOR USER_PROFILES
+-- =====================================================
+
+-- Enable RLS
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Users can view their own profile
+DROP POLICY IF EXISTS "Users can view own profile" ON user_profiles;
+CREATE POLICY "Users can view own profile" ON user_profiles
+  FOR SELECT
+  USING (auth.uid() = id);
+
+-- Policy: Users can update their own profile (but not role)
+DROP POLICY IF EXISTS "Users can update own profile" ON user_profiles;
+CREATE POLICY "Users can update own profile" ON user_profiles
+  FOR UPDATE
+  USING (auth.uid() = id)
+  WITH CHECK (
+    auth.uid() = id
+    AND role = (SELECT role FROM user_profiles WHERE id = auth.uid())
+  );
+
+-- Policy: Admins can view all profiles
+DROP POLICY IF EXISTS "Admins can view all profiles" ON user_profiles;
+CREATE POLICY "Admins can view all profiles" ON user_profiles
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM user_profiles
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
+
+-- Policy: Admins can insert new profiles
+DROP POLICY IF EXISTS "Admins can insert profiles" ON user_profiles;
+CREATE POLICY "Admins can insert profiles" ON user_profiles
+  FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM user_profiles
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
+
+-- Policy: Admins can update any profile
+DROP POLICY IF EXISTS "Admins can update all profiles" ON user_profiles;
+CREATE POLICY "Admins can update all profiles" ON user_profiles
+  FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM user_profiles
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
+
+-- Policy: Admins can delete profiles (except themselves)
+DROP POLICY IF EXISTS "Admins can delete profiles" ON user_profiles;
+CREATE POLICY "Admins can delete profiles" ON user_profiles
+  FOR DELETE
+  USING (
+    EXISTS (
+      SELECT 1 FROM user_profiles
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+    AND id != auth.uid()
+  );
+
+-- =====================================================
+-- STORAGE BUCKET FOR PROFILE PHOTOS
+-- =====================================================
+-- Note: Run these commands in Supabase Dashboard -> Storage
+-- or via the Supabase CLI
+
+-- Create bucket (run in Supabase SQL editor or dashboard):
+-- INSERT INTO storage.buckets (id, name, public)
+-- VALUES ('profile-photos', 'profile-photos', true)
+-- ON CONFLICT (id) DO NOTHING;
+
+-- Storage policies for profile-photos bucket:
+-- Users can upload to their own folder
+-- DROP POLICY IF EXISTS "Users can upload own photos" ON storage.objects;
+-- CREATE POLICY "Users can upload own photos" ON storage.objects
+--   FOR INSERT
+--   WITH CHECK (
+--     bucket_id = 'profile-photos'
+--     AND (storage.foldername(name))[1] = auth.uid()::text
+--   );
+
+-- Users can update their own photos
+-- DROP POLICY IF EXISTS "Users can update own photos" ON storage.objects;
+-- CREATE POLICY "Users can update own photos" ON storage.objects
+--   FOR UPDATE
+--   USING (
+--     bucket_id = 'profile-photos'
+--     AND (storage.foldername(name))[1] = auth.uid()::text
+--   );
+
+-- Users can delete their own photos
+-- DROP POLICY IF EXISTS "Users can delete own photos" ON storage.objects;
+-- CREATE POLICY "Users can delete own photos" ON storage.objects
+--   FOR DELETE
+--   USING (
+--     bucket_id = 'profile-photos'
+--     AND (storage.foldername(name))[1] = auth.uid()::text
+--   );
+
+-- Anyone can view photos (public bucket)
+-- DROP POLICY IF EXISTS "Anyone can view photos" ON storage.objects;
+-- CREATE POLICY "Anyone can view photos" ON storage.objects
+--   FOR SELECT
+--   USING (bucket_id = 'profile-photos');

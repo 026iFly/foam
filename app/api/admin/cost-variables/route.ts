@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { isAuthenticated } from '@/lib/session';
+import { isAuthenticated } from '@/lib/supabase-auth';
 
 // GET - Fetch all cost variables
 export async function GET(request: NextRequest) {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { isAuthenticated } from '@/lib/session';
+import { isAuthenticated } from '@/lib/supabase-auth';
 import { getQuoteRequest, updateQuoteRequest, deleteQuoteRequest, markQuoteReviewed, markQuoteQuoted } from '@/lib/quotes';
 import type { UpdateQuoteRequestInput } from '@/lib/types/quote';
 

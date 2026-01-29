@@ -21,10 +21,10 @@ export default async function Home() {
                 Få Kostnadsfri Offert
               </Link>
               <Link
-                href="/kalkylator-expert"
+                href="/kalkylator"
                 className="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold hover:bg-white hover:text-green-700 transition text-lg"
               >
-                Expert Priskalkylator
+                Priskalkylator
               </Link>
             </div>
           </div>

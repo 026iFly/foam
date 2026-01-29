@@ -1,9 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-export async function POST() {
-  try {
+export async function GET(request: NextRequest) {
+  const { searchParams, origin } = new URL(request.url);
+  const code = searchParams.get('code');
+  const next = searchParams.get('next') ?? '/admin';
+
+  if (code) {
     const cookieStore = await cookies();
 
     const supabase = createServerClient(
@@ -23,14 +27,13 @@ export async function POST() {
       }
     );
 
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Logout error:', error);
-    return NextResponse.json(
-      { error: 'Ett fel uppstod vid utloggning' },
-      { status: 500 }
-    );
+    if (!error) {
+      return NextResponse.redirect(`${origin}${next}`);
+    }
   }
+
+  // Return the user to an error page with instructions
+  return NextResponse.redirect(`${origin}/login?error=auth_callback_error`);
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { isAuthenticated } from '@/lib/session';
+import { isAuthenticated } from '@/lib/supabase-auth';
 import { getQuoteRequest, markQuoteQuoted } from '@/lib/quotes';
 import { getCompanyInfo } from '@/lib/queries';
 import { renderToBuffer } from '@react-pdf/renderer';

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { isAuthenticated } from '@/lib/session';
+import { isAuthenticated } from '@/lib/supabase-auth';
 import { getQuoteRequest, generateRotInfoToken } from '@/lib/quotes';
 
 export async function POST(
