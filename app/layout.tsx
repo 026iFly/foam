@@ -17,6 +17,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Professionell Sprutisolering | Intellifoam",
   description: "Professionell sprutisolering för hem och företag. Expertis inom slutencellsskum och öppencellsskum för optimal energieffektivitet.",
+  icons: {
+    icon: '/intellifoam-logo_bookmark.png',
+    apple: '/intellifoam-logo_bookmark.png',
+  },
 };
 
 export default function RootLayout({

@@ -225,7 +225,7 @@ ON CONFLICT (variable_key) DO NOTHING;
 
 -- Insert default company info
 INSERT INTO company_info (company_name, org_number, phone, email, website, description)
-SELECT 'Intelliray AB', '', '+46 XX XXX XX XX', 'info@intelliray.se', 'https://intelliray.se', 'Vi erbjuder professionell sprayisolering med fokus på miljövänliga lösningar.'
+SELECT 'Intellifoam', '', '010 703 74 00', 'info@intellifoam.se', 'https://intellifoam.se', 'Vi erbjuder professionell sprayisolering med fokus på miljövänliga lösningar.'
 WHERE NOT EXISTS (SELECT 1 FROM company_info LIMIT 1);
 
 -- Insert default FAQs

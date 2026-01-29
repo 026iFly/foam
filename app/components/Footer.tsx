@@ -6,7 +6,7 @@ export default async function Footer() {
   const currentYear = new Date().getFullYear();
 
   // Fallback if company info is not available
-  const companyName = company?.company_name || 'Intelliray AB';
+  const companyName = company?.company_name || 'Intellifoam';
   const companyDescription = company?.description || 'Professionell sprayisolering';
 
   return (
@@ -80,7 +80,7 @@ export default async function Footer() {
 
         <div className="border-t border-gray-700 mt-8 pt-6 text-center">
           <p className="text-gray-400 mb-2">
-            &copy; {currentYear} {companyName} - Intelliray AB. Alla rättigheter förbehållna.
+            &copy; {currentYear} {companyName}. Alla rättigheter förbehållna.
           </p>
           <p className="text-gray-400">
             En del av{' '}

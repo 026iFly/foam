@@ -1,6 +1,18 @@
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet, type DocumentProps } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 import type { CalculationData, BuildingPartRecommendation } from '../types/quote';
+import * as fs from 'fs';
+import * as path from 'path';
+
+// Load logo as base64 for PDF embedding
+const logoPath = path.join(process.cwd(), 'public', 'intellifoam-logo.png');
+let logoBase64: string | null = null;
+try {
+  const logoBuffer = fs.readFileSync(logoPath);
+  logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+} catch (e) {
+  console.warn('Could not load logo for PDF:', e);
+}
 
 // Create styles
 const styles = StyleSheet.create({
@@ -16,6 +28,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: '#16a34a',
     paddingBottom: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  logo: {
+    width: 180,
+    height: 52,
+    marginBottom: 10,
   },
   companyName: {
     fontSize: 24,
@@ -292,11 +315,17 @@ export const QuoteDocument = ({
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.companyName}>{companyInfo.name}</Text>
-          <Text style={styles.companyInfo}>
-            {companyInfo.address} | {companyInfo.phone} | {companyInfo.email}
-          </Text>
-          <Text style={styles.companyInfo}>Org.nr: {companyInfo.orgNumber}</Text>
+          <View style={styles.headerLeft}>
+            {logoBase64 ? (
+              <Image src={logoBase64} style={styles.logo} />
+            ) : (
+              <Text style={styles.companyName}>{companyInfo.name}</Text>
+            )}
+            <Text style={styles.companyInfo}>
+              {companyInfo.address} | {companyInfo.phone} | {companyInfo.email}
+            </Text>
+            <Text style={styles.companyInfo}>Org.nr: {companyInfo.orgNumber}</Text>
+          </View>
         </View>
 
         {/* Quote Header */}

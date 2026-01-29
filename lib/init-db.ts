@@ -73,7 +73,7 @@ db.exec(`
   )
 `);
 
-// Insert initial company information for Intelliray AB
+// Insert initial company information for Intellifoam
 const checkCompany = db.prepare('SELECT COUNT(*) as count FROM company_info').get() as { count: number };
 
 if (checkCompany.count === 0) {
@@ -84,11 +84,11 @@ if (checkCompany.count === 0) {
   `);
 
   insertCompany.run(
-    'Intelliray AB',
+    'Intellifoam',
     '', // Add org number when available
-    '+46 XX XXX XX XX',
-    'info@intelliray.se',
-    'https://intelliray.se',
+    '010 703 74 00',
+    'info@intellifoam.se',
+    'https://intellifoam.se',
     'Vi erbjuder professionell sprayisolering med fokus på miljövänliga lösningar.'
   );
 
