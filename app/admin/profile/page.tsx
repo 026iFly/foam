@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 
 interface UserProfile {
   id: string;
-  email: string;
   first_name: string | null;
   last_name: string | null;
   phone: string | null;
@@ -15,6 +14,7 @@ interface UserProfile {
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [userEmail, setUserEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -39,11 +39,15 @@ export default function ProfilePage() {
       const res = await fetch('/api/profile');
       const data = await res.json();
 
-      if (data.user?.profile) {
-        setProfile(data.user.profile);
-        setFirstName(data.user.profile.first_name || '');
-        setLastName(data.user.profile.last_name || '');
-        setPhone(data.user.profile.phone || '');
+      if (data.user) {
+        // Email comes from auth, profile comes from user_profiles table
+        setUserEmail(data.user.email || '');
+        if (data.user.profile) {
+          setProfile(data.user.profile);
+          setFirstName(data.user.profile.first_name || '');
+          setLastName(data.user.profile.last_name || '');
+          setPhone(data.user.profile.phone || '');
+        }
       }
     } catch (err) {
       setError('Kunde inte hamta profil');
@@ -193,7 +197,7 @@ export default function ProfilePage() {
               ) : (
                 <div className="w-24 h-24 rounded-full bg-gray-300 flex items-center justify-center">
                   <span className="text-3xl text-gray-600">
-                    {firstName?.[0] || profile?.email?.[0]?.toUpperCase()}
+                    {firstName?.[0] || userEmail?.[0]?.toUpperCase()}
                   </span>
                 </div>
               )}
@@ -234,7 +238,7 @@ export default function ProfilePage() {
                   </label>
                   <input
                     type="email"
-                    value={profile?.email || ''}
+                    value={userEmail}
                     disabled
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700"
                   />
