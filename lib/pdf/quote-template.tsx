@@ -19,7 +19,9 @@ const styles = StyleSheet.create({
   page: {
     flexDirection: 'column',
     backgroundColor: '#ffffff',
-    padding: 35,
+    paddingTop: 25,
+    paddingBottom: 35,
+    paddingHorizontal: 35,
     fontFamily: 'Helvetica',
     fontSize: 9,
   },
@@ -31,10 +33,10 @@ const styles = StyleSheet.create({
     fontSize: 9,
   },
   header: {
-    marginBottom: 20,
+    marginBottom: 10,
     borderBottomWidth: 2,
     borderBottomColor: '#16a34a',
-    paddingBottom: 12,
+    paddingBottom: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
@@ -43,9 +45,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logo: {
-    width: 160,
-    height: 107, // Maintains 3:2 aspect ratio (1536x1024)
-    marginBottom: 8,
+    width: 120,
+    height: 80, // Maintains 3:2 aspect ratio (1536x1024)
   },
   companyName: {
     fontSize: 20,
@@ -60,7 +61,7 @@ const styles = StyleSheet.create({
   quoteHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 18,
+    marginBottom: 12,
   },
   quoteTitle: {
     fontSize: 16,
@@ -81,7 +82,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   section: {
-    marginBottom: 14,
+    marginBottom: 10,
   },
   sectionTitle: {
     fontSize: 10,
