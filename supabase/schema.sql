@@ -272,6 +272,17 @@ CREATE TRIGGER update_user_profiles_updated_at
 -- Enable RLS
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 
+-- Helper function to check if current user is admin (bypasses RLS to avoid recursion)
+CREATE OR REPLACE FUNCTION is_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM user_profiles
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Policy: Users can view their own profile
 DROP POLICY IF EXISTS "Users can view own profile" ON user_profiles;
 CREATE POLICY "Users can view own profile" ON user_profiles
@@ -282,56 +293,31 @@ CREATE POLICY "Users can view own profile" ON user_profiles
 DROP POLICY IF EXISTS "Users can update own profile" ON user_profiles;
 CREATE POLICY "Users can update own profile" ON user_profiles
   FOR UPDATE
-  USING (auth.uid() = id)
-  WITH CHECK (
-    auth.uid() = id
-    AND role = (SELECT role FROM user_profiles WHERE id = auth.uid())
-  );
+  USING (auth.uid() = id);
 
 -- Policy: Admins can view all profiles
 DROP POLICY IF EXISTS "Admins can view all profiles" ON user_profiles;
 CREATE POLICY "Admins can view all profiles" ON user_profiles
   FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles
-      WHERE id = auth.uid() AND role = 'admin'
-    )
-  );
+  USING (is_admin());
 
 -- Policy: Admins can insert new profiles
 DROP POLICY IF EXISTS "Admins can insert profiles" ON user_profiles;
 CREATE POLICY "Admins can insert profiles" ON user_profiles
   FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM user_profiles
-      WHERE id = auth.uid() AND role = 'admin'
-    )
-  );
+  WITH CHECK (is_admin());
 
 -- Policy: Admins can update any profile
 DROP POLICY IF EXISTS "Admins can update all profiles" ON user_profiles;
 CREATE POLICY "Admins can update all profiles" ON user_profiles
   FOR UPDATE
-  USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles
-      WHERE id = auth.uid() AND role = 'admin'
-    )
-  );
+  USING (is_admin());
 
 -- Policy: Admins can delete profiles (except themselves)
 DROP POLICY IF EXISTS "Admins can delete profiles" ON user_profiles;
 CREATE POLICY "Admins can delete profiles" ON user_profiles
   FOR DELETE
-  USING (
-    EXISTS (
-      SELECT 1 FROM user_profiles
-      WHERE id = auth.uid() AND role = 'admin'
-    )
-    AND id != auth.uid()
-  );
+  USING (is_admin() AND id != auth.uid());
 
 -- =====================================================
 -- STORAGE BUCKET FOR PROFILE PHOTOS
