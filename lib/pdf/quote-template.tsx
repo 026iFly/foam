@@ -14,20 +14,27 @@ try {
   console.warn('Could not load logo for PDF:', e);
 }
 
-// Create styles
+// Create styles - compact version for better fit
 const styles = StyleSheet.create({
   page: {
     flexDirection: 'column',
     backgroundColor: '#ffffff',
-    padding: 40,
+    padding: 35,
     fontFamily: 'Helvetica',
-    fontSize: 10,
+    fontSize: 9,
+  },
+  page2: {
+    flexDirection: 'column',
+    backgroundColor: '#ffffff',
+    padding: 35,
+    fontFamily: 'Helvetica',
+    fontSize: 9,
   },
   header: {
-    marginBottom: 30,
+    marginBottom: 20,
     borderBottomWidth: 2,
     borderBottomColor: '#16a34a',
-    paddingBottom: 15,
+    paddingBottom: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
@@ -36,27 +43,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logo: {
-    width: 180,
-    height: 52,
-    marginBottom: 10,
+    width: 160,
+    height: 107, // Maintains 3:2 aspect ratio (1536x1024)
+    marginBottom: 8,
   },
   companyName: {
-    fontSize: 24,
+    fontSize: 20,
     fontFamily: 'Helvetica-Bold',
     color: '#16a34a',
-    marginBottom: 5,
+    marginBottom: 4,
   },
   companyInfo: {
-    fontSize: 9,
+    fontSize: 8,
     color: '#6b7280',
   },
   quoteHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 25,
+    marginBottom: 18,
   },
   quoteTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: 'Helvetica-Bold',
     color: '#1f2937',
   },
@@ -64,24 +71,24 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   quoteNumber: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: 'Helvetica-Bold',
     color: '#16a34a',
   },
   quoteDate: {
-    fontSize: 9,
+    fontSize: 8,
     color: '#6b7280',
-    marginTop: 3,
+    marginTop: 2,
   },
   section: {
-    marginBottom: 20,
+    marginBottom: 14,
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 10,
     fontFamily: 'Helvetica-Bold',
     color: '#1f2937',
-    marginBottom: 10,
-    paddingBottom: 5,
+    marginBottom: 8,
+    paddingBottom: 4,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
   },
@@ -93,14 +100,14 @@ const styles = StyleSheet.create({
     width: '48%',
   },
   label: {
-    fontSize: 8,
+    fontSize: 7,
     color: '#6b7280',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   value: {
-    fontSize: 10,
+    fontSize: 9,
     color: '#1f2937',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   table: {
     display: 'flex',
@@ -108,27 +115,27 @@ const styles = StyleSheet.create({
     borderStyle: 'solid',
     borderWidth: 1,
     borderColor: '#e5e7eb',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   tableHeader: {
     flexDirection: 'row',
     backgroundColor: '#f9fafb',
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
-    paddingVertical: 8,
-    paddingHorizontal: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 5,
   },
   tableRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
-    paddingVertical: 8,
-    paddingHorizontal: 6,
+    paddingVertical: 5,
+    paddingHorizontal: 5,
   },
   tableRowLast: {
     flexDirection: 'row',
-    paddingVertical: 8,
-    paddingHorizontal: 6,
+    paddingVertical: 5,
+    paddingHorizontal: 5,
   },
   tableCol1: {
     width: '35%',
@@ -146,109 +153,125 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   tableHeaderText: {
-    fontSize: 8,
+    fontSize: 7,
     fontFamily: 'Helvetica-Bold',
     color: '#6b7280',
   },
   tableText: {
-    fontSize: 9,
+    fontSize: 8,
     color: '#1f2937',
   },
+  tableTextSmall: {
+    fontSize: 6,
+    color: '#6b7280',
+  },
   summaryTable: {
-    marginTop: 15,
-    paddingTop: 10,
+    marginTop: 10,
+    paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 4,
+    paddingVertical: 3,
   },
   summaryLabel: {
-    fontSize: 10,
+    fontSize: 9,
     color: '#6b7280',
   },
   summaryValue: {
-    fontSize: 10,
+    fontSize: 9,
     color: '#1f2937',
   },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
-    marginTop: 8,
+    paddingVertical: 6,
+    marginTop: 6,
     borderTopWidth: 2,
     borderTopColor: '#16a34a',
   },
   totalLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: 'Helvetica-Bold',
     color: '#1f2937',
   },
   totalValue: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: 'Helvetica-Bold',
     color: '#16a34a',
   },
   rotRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 4,
+    paddingVertical: 3,
     backgroundColor: '#dbeafe',
-    paddingHorizontal: 8,
-    marginTop: 4,
+    paddingHorizontal: 6,
+    marginTop: 3,
   },
   rotLabel: {
-    fontSize: 10,
+    fontSize: 9,
     color: '#1d4ed8',
   },
   rotValue: {
-    fontSize: 10,
+    fontSize: 9,
     fontFamily: 'Helvetica-Bold',
     color: '#1d4ed8',
   },
-  terms: {
-    marginTop: 20,
-    padding: 15,
-    backgroundColor: '#f9fafb',
-    borderRadius: 4,
-  },
-  termsTitle: {
-    fontSize: 10,
-    fontFamily: 'Helvetica-Bold',
-    color: '#1f2937',
-    marginBottom: 8,
-  },
-  termsText: {
-    fontSize: 8,
-    color: '#6b7280',
-    lineHeight: 1.5,
-    marginBottom: 4,
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 30,
-    left: 40,
-    right: 40,
-    textAlign: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-    paddingTop: 10,
-  },
-  footerText: {
-    fontSize: 8,
-    color: '#9ca3af',
-  },
   validityBadge: {
     backgroundColor: '#dcfce7',
-    padding: 8,
-    marginTop: 10,
+    padding: 6,
+    marginTop: 8,
     textAlign: 'center',
   },
   validityText: {
-    fontSize: 9,
+    fontSize: 8,
     color: '#166534',
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 25,
+    left: 35,
+    right: 35,
+    textAlign: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+    paddingTop: 8,
+  },
+  footerText: {
+    fontSize: 7,
+    color: '#9ca3af',
+  },
+  // Page 2 styles
+  terms: {
+    padding: 15,
+    backgroundColor: '#f9fafb',
+    borderRadius: 4,
+    marginTop: 20,
+  },
+  termsTitle: {
+    fontSize: 12,
+    fontFamily: 'Helvetica-Bold',
+    color: '#1f2937',
+    marginBottom: 12,
+  },
+  termsText: {
+    fontSize: 9,
+    color: '#4b5563',
+    lineHeight: 1.6,
+    marginBottom: 6,
+  },
+  page2Header: {
+    marginBottom: 20,
+    borderBottomWidth: 2,
+    borderBottomColor: '#16a34a',
+    paddingBottom: 10,
+  },
+  page2Title: {
+    fontSize: 14,
+    fontFamily: 'Helvetica-Bold',
+    color: '#1f2937',
   },
 });
 
@@ -312,6 +335,7 @@ export const QuoteDocument = ({
 
   return (
     <Document>
+      {/* Page 1 - Quote Details */}
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
@@ -390,14 +414,14 @@ export const QuoteDocument = ({
                 <View key={idx} style={isLast ? styles.tableRowLast : styles.tableRow}>
                   <View style={styles.tableCol1}>
                     <Text style={styles.tableText}>{rec.partName}</Text>
-                    <Text style={{ ...styles.tableText, fontSize: 7, color: '#6b7280' }}>
+                    <Text style={styles.tableTextSmall}>
                       {rec.closedCellThickness > 0 && `Slutencell: ${rec.closedCellThickness}mm`}
                       {rec.closedCellThickness > 0 && rec.openCellThickness > 0 && ' + '}
-                      {rec.openCellThickness > 0 && `Oppencell: ${rec.openCellThickness}mm`}
+                      {rec.openCellThickness > 0 && `Öppencell: ${rec.openCellThickness}mm`}
                     </Text>
                   </View>
                   <View style={styles.tableCol2}>
-                    <Text style={styles.tableText}>{rec.area} m2</Text>
+                    <Text style={styles.tableText}>{rec.area} m²</Text>
                   </View>
                   <View style={styles.tableCol3}>
                     <Text style={styles.tableText}>{rec.totalThickness} mm</Text>
@@ -415,11 +439,11 @@ export const QuoteDocument = ({
 
         {/* Cost Summary */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Kostnadssammanstallning</Text>
+          <Text style={styles.sectionTitle}>Kostnadssammanställning</Text>
 
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Total yta:</Text>
-            <Text style={styles.summaryValue}>{totals.totalArea} m2</Text>
+            <Text style={styles.summaryValue}>{totals.totalArea} m²</Text>
           </View>
 
           <View style={styles.summaryRow}>
@@ -483,30 +507,91 @@ export const QuoteDocument = ({
         {/* Validity Badge */}
         <View style={styles.validityBadge}>
           <Text style={styles.validityText}>
-            Denna offert ar giltig till och med {formatDate(validUntil)}
+            Denna offert är giltig till och med {formatDate(validUntil)}
           </Text>
+        </View>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            {companyInfo.name} | Org.nr: {companyInfo.orgNumber} | {companyInfo.email} | {companyInfo.phone}
+          </Text>
+        </View>
+      </Page>
+
+      {/* Page 2 - Terms and Conditions */}
+      <Page size="A4" style={styles.page2}>
+        {/* Page 2 Header */}
+        <View style={styles.page2Header}>
+          <Text style={styles.page2Title}>Villkor - Offert {quoteNumber}</Text>
         </View>
 
         {/* Terms */}
         <View style={styles.terms}>
-          <Text style={styles.termsTitle}>Villkor</Text>
+          <Text style={styles.termsTitle}>Allmänna villkor</Text>
+
           <Text style={styles.termsText}>
-            - Betalning: 30 dagar netto fran fakturadatum
+            • Betalning: 30 dagar netto från fakturadatum
           </Text>
           <Text style={styles.termsText}>
-            - Arbetet utfors enligt svensk standard och BBR
+            • Arbetet utförs enligt svensk standard och Boverkets byggregler (BBR)
           </Text>
           <Text style={styles.termsText}>
-            - Alla priser ar baserade pa normala arbetsforhallanden
+            • Alla priser är baserade på normala arbetsförhållanden
           </Text>
           <Text style={styles.termsText}>
-            - Garanti: 10 ar pa material, 5 ar pa utfort arbete
+            • Garanti: 10 år på material, 5 år på utfört arbete
+          </Text>
+          <Text style={styles.termsText}>
+            • Offerten förutsätter fri tillgång till arbetsplatsen under arbetstid
+          </Text>
+          <Text style={styles.termsText}>
+            • Eventuella tilläggsarbeten debiteras enligt överenskommelse
+          </Text>
+          <Text style={styles.termsText}>
+            • Vi förbehåller oss rätten till prisändringar vid väsentligt ändrade förutsättningar
           </Text>
           {totals.rotDeduction > 0 && (
-            <Text style={styles.termsText}>
-              - ROT-avdrag: Kunden ansvarar for att uppfylla kraven for ROT-avdrag
-            </Text>
+            <>
+              <Text style={{ ...styles.termsText, marginTop: 10 }}>
+                • ROT-avdrag: Kunden ansvarar för att uppfylla kraven för ROT-avdrag enligt Skatteverkets regler
+              </Text>
+              <Text style={styles.termsText}>
+                • ROT-avdraget förutsätter att kunden äger fastigheten och att arbetet utförs i kundens bostad
+              </Text>
+            </>
           )}
+        </View>
+
+        <View style={{ ...styles.terms, marginTop: 15 }}>
+          <Text style={styles.termsTitle}>Teknisk information</Text>
+
+          <Text style={styles.termsText}>
+            • Våra produkter är CE-märkta enligt gällande EU-standarder
+          </Text>
+          <Text style={styles.termsText}>
+            • Materialet följer REACH-förordningen för kemikaliesäkerhet
+          </Text>
+          <Text style={styles.termsText}>
+            • Våra tekniker är certifierade enligt kraven för hantering av diisocyanater
+          </Text>
+          <Text style={styles.termsText}>
+            • Arbetet utförs med hänsyn till Arbetsmiljöverkets föreskrifter (AFS)
+          </Text>
+        </View>
+
+        <View style={{ ...styles.terms, marginTop: 15 }}>
+          <Text style={styles.termsTitle}>Kontakt</Text>
+
+          <Text style={styles.termsText}>
+            Vid frågor om denna offert, vänligen kontakta oss:
+          </Text>
+          <Text style={{ ...styles.termsText, marginTop: 5 }}>
+            Telefon: {companyInfo.phone}
+          </Text>
+          <Text style={styles.termsText}>
+            E-post: {companyInfo.email}
+          </Text>
         </View>
 
         {/* Footer */}
