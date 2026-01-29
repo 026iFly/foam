@@ -172,6 +172,18 @@ export default function AdminPage() {
               >
                 Offertförfrågningar
               </Link>
+              <Link
+                href="/admin/users"
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-medium"
+              >
+                Hantera användare
+              </Link>
+              <Link
+                href="/admin/profile"
+                className="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition font-medium"
+              >
+                Min profil
+              </Link>
             </div>
           </div>
 

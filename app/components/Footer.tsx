@@ -58,6 +58,11 @@ export default async function Footer() {
                   Kontakta Oss
                 </Link>
               </li>
+              <li>
+                <Link href="/admin" className="text-gray-300 hover:text-green-400 transition">
+                  Admin
+                </Link>
+              </li>
             </ul>
           </div>
 
