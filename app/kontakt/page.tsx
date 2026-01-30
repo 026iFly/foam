@@ -327,11 +327,15 @@ function ContactPageContent() {
                 <div className="space-y-4">
                   <div>
                     <h3 className="font-semibold text-gray-800 mb-1">Telefon</h3>
-                    <p className="text-gray-900">+46 XX XXX XX XX</p>
+                    <p className="text-gray-900">
+                      <a href="tel:010-703-74-00" className="hover:text-green-600 transition">010 703 74 00</a>
+                    </p>
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-800 mb-1">E-post</h3>
-                    <p className="text-gray-900">info@intelliray.se</p>
+                    <p className="text-gray-900">
+                      <a href="mailto:info@intellifoam.se" className="hover:text-green-600 transition">info@intellifoam.se</a>
+                    </p>
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-800 mb-1">Öppettider</h3>
