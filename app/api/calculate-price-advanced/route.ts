@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { calculateDistanceToCustomer } from '@/lib/distance-calculator';
 
 interface CostVariables {
   [key: string]: number;
@@ -90,19 +91,11 @@ export async function POST(request: NextRequest) {
     let travelHours = 0;
     if (customer_address) {
       try {
-        // Call the distance calculation API
-        const distanceRes = await fetch(
-          `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/calculate-distance`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ customerAddress: customer_address }),
-          }
-        );
+        // Calculate distance directly (no HTTP request needed)
+        const distanceResult = await calculateDistanceToCustomer(customer_address);
 
-        if (distanceRes.ok) {
-          const distanceData = await distanceRes.json();
-          distanceKm = distanceData.distance_km;
+        if (distanceResult) {
+          distanceKm = distanceResult.distance_km;
 
           // Calculate travel time (round trip) in hours
           const averageSpeed = vars.average_travel_speed_kmh || 80;
