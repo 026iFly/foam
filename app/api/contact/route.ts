@@ -66,8 +66,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     console.error('Error saving submission:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Ett fel uppstod vid sparande av förfrågan' },
+      { error: 'Ett fel uppstod vid sparande av förfrågan', details: errorMessage },
       { status: 500 }
     );
   }
