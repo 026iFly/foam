@@ -45,9 +45,9 @@ export async function createQuoteRequest(input: CreateQuoteRequestInput): Promis
       has_three_phase: input.has_three_phase || false,
       apply_rot_deduction: input.apply_rot_deduction || false,
       total_area: input.total_area || null,
-      total_excl_vat: input.total_excl_vat || null,
-      total_incl_vat: input.total_incl_vat || null,
-      rot_deduction: input.rot_deduction || 0,
+      total_excl_vat: input.total_excl_vat ? Math.round(input.total_excl_vat) : null,
+      total_incl_vat: input.total_incl_vat ? Math.round(input.total_incl_vat) : null,
+      rot_deduction: input.rot_deduction ? Math.round(input.rot_deduction) : 0,
     })
     .select('id')
     .single();
