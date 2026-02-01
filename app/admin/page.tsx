@@ -48,13 +48,15 @@ interface StockLevel {
   current_stock: number;
   minimum_stock: number;
   is_low: boolean;
-  reserved_7_days: number;
-  reserved_30_days: number;
+  confirmed_7_days: number;
+  confirmed_30_days: number;
   incoming_7_days: number;
   incoming_30_days: number;
   projected_from_quotes: number;
-  projected_stock_7_days: number;
-  projected_stock_30_days: number;
+  stock_in_7_days: number;
+  stock_in_30_days: number;
+  low_in_7_days: boolean;
+  low_in_30_days: boolean;
 }
 
 interface MaterialProjections {
@@ -437,16 +439,13 @@ export default function AdminDashboard() {
                               {stock.current_stock} {stock.unit}
                             </span>
                           </div>
-                          {stock.projected_from_quotes > 0 && (
-                            <div className="text-xs text-blue-600">
-                              Prognos från offerter: ~{stock.projected_from_quotes} {stock.unit}
-                            </div>
-                          )}
-                          <div className="text-xs text-gray-500">
-                            Om 7d (bokade): {stock.current_stock - stock.reserved_7_days + stock.incoming_7_days} {stock.unit}
+                          <div className={`text-xs ${stock.low_in_7_days ? 'text-orange-600 font-medium' : 'text-gray-500'}`}>
+                            Om 7d: {stock.stock_in_7_days} {stock.unit}
+                            {stock.confirmed_7_days > 0 && ` (${stock.confirmed_7_days} bokade)`}
                           </div>
-                          <div className={`text-xs ${stock.projected_stock_30_days < stock.minimum_stock ? 'text-orange-600 font-medium' : 'text-gray-500'}`}>
-                            Om 30d (inkl. prognos): {stock.projected_stock_30_days} {stock.unit}
+                          <div className={`text-xs ${stock.low_in_30_days ? 'text-orange-600 font-medium' : 'text-gray-500'}`}>
+                            Om 30d: {stock.stock_in_30_days} {stock.unit}
+                            {stock.projected_from_quotes > 0 && ` (inkl. ~${stock.projected_from_quotes} prognos)`}
                           </div>
                           {stock.is_low && (
                             <div className="text-xs text-red-600 font-medium">
@@ -460,7 +459,7 @@ export default function AdminDashboard() {
                 </div>
                 {materialProjections && (materialProjections.closedCellKg > 0 || materialProjections.openCellKg > 0) && (
                   <div className="px-4 pb-3 text-xs text-gray-400">
-                    Baserat på {Math.round(materialProjections.conversionRates.signed * 100)}% signerade, {Math.round(materialProjections.conversionRates.sent * 100)}% skickade, {Math.round(materialProjections.conversionRates.pending * 100)}% nya
+                    Prognos: {Math.round(materialProjections.conversionRates.signed * 100)}% signerade, {Math.round(materialProjections.conversionRates.sent * 100)}% skickade, {Math.round(materialProjections.conversionRates.pending * 100)}% nya
                   </div>
                 )}
                 <div className="p-3 border-t border-gray-200 bg-gray-50">
