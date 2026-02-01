@@ -7,6 +7,9 @@ import {
   calculateMinClosedCellThickness,
   FOAM_PROPERTIES,
   BBR_U_VALUES,
+  getFoamProperties,
+  BuildingPhysicsVariables,
+  DEFAULT_SAFETY_MARGIN,
 } from '@/lib/foam-calculations';
 import type { CalculationData, BuildingPartRecommendation } from '@/lib/types/quote';
 
@@ -14,10 +17,10 @@ interface CostVariables {
   [key: string]: number;
 }
 
-async function getCostVariables(): Promise<CostVariables> {
+async function getCostVariables(): Promise<{ vars: CostVariables; physicsVars: BuildingPhysicsVariables }> {
   const { data, error } = await supabase
     .from('cost_variables')
-    .select('variable_key, variable_value');
+    .select('variable_key, variable_value, category');
 
   if (error) {
     console.error('Error fetching cost variables:', error);
@@ -25,10 +28,36 @@ async function getCostVariables(): Promise<CostVariables> {
   }
 
   const vars: CostVariables = {};
+  const physicsVars: BuildingPhysicsVariables = {};
+
   for (const v of data || []) {
     vars[v.variable_key] = v.variable_value;
+
+    // Also populate physics vars for building_physics category
+    if (v.category === 'building_physics') {
+      (physicsVars as Record<string, number>)[v.variable_key] = v.variable_value;
+    }
   }
-  return vars;
+
+  return { vars, physicsVars };
+}
+
+async function getProjectMultipliers(): Promise<Record<string, number>> {
+  const { data, error } = await supabase
+    .from('project_multipliers')
+    .select('project_type, multiplier')
+    .eq('is_active', 1);
+
+  if (error) {
+    console.error('Error fetching project multipliers:', error);
+    return {};
+  }
+
+  const multipliers: Record<string, number> = {};
+  for (const m of data || []) {
+    multipliers[m.project_type] = m.multiplier;
+  }
+  return multipliers;
 }
 
 interface RecalculatePartInput {
@@ -73,8 +102,13 @@ export async function POST(
       };
     };
 
-    // Get cost variables from database
-    const vars = await getCostVariables();
+    // Get cost variables and physics variables from database
+    const { vars, physicsVars } = await getCostVariables();
+    const multipliers = await getProjectMultipliers();
+
+    // Get foam properties with DB overrides
+    const foamProps = getFoamProperties(physicsVars);
+    const safetyMargin = physicsVars.condensation_safety_margin ?? DEFAULT_SAFETY_MARGIN;
 
     // Process each part
     const recalculatedParts: BuildingPartRecommendation[] = [];
@@ -115,7 +149,10 @@ export async function POST(
       }
 
       const materialCost = closedCellCost + openCellCost;
-      const sprayHours = closedSprayHours + openSprayHours;
+
+      // Apply project multiplier to spray hours based on part type
+      const partMultiplier = multipliers[part.partType] ?? 1.0;
+      const sprayHours = (closedSprayHours + openSprayHours) * partMultiplier;
 
       // Accumulate totals
       totalClosedCellKg += closedCellKg;
@@ -158,7 +195,7 @@ export async function POST(
 
         // Calculate temperature at interface for flash-and-batt
         let tempAtInterface = climate.outdoorTemp;
-        let safetyMargin = 0;
+        let interfaceSafetyMargin = 0;
 
         if (configType === 'flash_and_batt' || configType === 'closed_only') {
           const minCalc = calculateMinClosedCellThickness({
@@ -166,13 +203,14 @@ export async function POST(
             RH_in: climate.indoorRH,
             T_out: climate.outdoorTemp,
             openCellThickness: openThickness,
+            safetyMargin: safetyMargin,
           });
 
-          // Calculate actual temperature at the closed/open interface
+          // Calculate actual temperature at the closed/open interface using DB values
           const R_out_film = 0.04;
           const R_ext_fixed = 0.12;
-          const R_closed = (closedThickness / 1000) / FOAM_PROPERTIES.closed_cell.lambda;
-          const R_open = (openThickness / 1000) / FOAM_PROPERTIES.open_cell.lambda;
+          const R_closed = (closedThickness / 1000) / foamProps.closed_cell.lambda;
+          const R_open = (openThickness / 1000) / foamProps.open_cell.lambda;
           const R_int_fixed = 0.06;
           const R_in_film = 0.13;
           const R_total = R_out_film + R_ext_fixed + R_closed + R_open + R_int_fixed + R_in_film;
@@ -181,7 +219,7 @@ export async function POST(
             ((R_out_film + R_ext_fixed + R_closed) / R_total) *
             (climate.indoorTemp - climate.outdoorTemp);
 
-          safetyMargin = tempAtInterface - minCalc.T_dew;
+          interfaceSafetyMargin = tempAtInterface - minCalc.T_dew;
         }
 
         condensationRisk = riskAnalysis.risk;
@@ -190,16 +228,16 @@ export async function POST(
           dewPointInside: riskAnalysis.dewPointInside,
           tempAtInterface,
           explanation: riskAnalysis.explanation,
-          safetyMargin,
+          safetyMargin: interfaceSafetyMargin,
         };
       }
 
-      // Calculate U-value
+      // Calculate U-value using DB foam properties
       const R_closed = closedThickness > 0
-        ? (closedThickness / 1000) / FOAM_PROPERTIES.closed_cell.lambda
+        ? (closedThickness / 1000) / foamProps.closed_cell.lambda
         : 0;
       const R_open = openThickness > 0
-        ? (openThickness / 1000) / FOAM_PROPERTIES.open_cell.lambda
+        ? (openThickness / 1000) / foamProps.open_cell.lambda
         : 0;
       const R_total = R_closed + R_open + 0.17; // Add surface resistances
       const actualUValue = R_total > 0 ? 1 / R_total : 0;

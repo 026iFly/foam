@@ -49,9 +49,26 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
   const [rotLinkCopied, setRotLinkCopied] = useState(false);
   const [generatingRotLink, setGeneratingRotLink] = useState(false);
   const [recalculating, setRecalculating] = useState(false);
+  const [sendingRotLink, setSendingRotLink] = useState(false);
+
+  // Booking state
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [bookingType, setBookingType] = useState<'visit' | 'installation'>('visit');
+  const [bookingDate, setBookingDate] = useState('');
+  const [bookingTime, setBookingTime] = useState('09:00');
+  const [bookingNotes, setBookingNotes] = useState('');
+  const [savingBooking, setSavingBooking] = useState(false);
+  const [quoteBookings, setQuoteBookings] = useState<Array<{
+    id: number;
+    booking_type: string;
+    scheduled_date: string;
+    scheduled_time: string;
+    status: string;
+  }>>([]);
 
   useEffect(() => {
     fetchQuote();
+    fetchBookings();
   }, [id]);
 
   const fetchQuote = async () => {
@@ -74,6 +91,65 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
       console.error('Error fetching quote:', error);
     }
     setLoading(false);
+  };
+
+  const fetchBookings = async () => {
+    try {
+      const res = await fetch('/api/admin/bookings');
+      if (res.ok) {
+        const data = await res.json();
+        // Filter bookings for this quote
+        const thisQuoteBookings = (data.bookings || []).filter(
+          (b: { quote_id: number }) => b.quote_id === parseInt(id as string)
+        );
+        setQuoteBookings(thisQuoteBookings);
+      }
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+    }
+  };
+
+  const openBookingModal = (type: 'visit' | 'installation') => {
+    setBookingType(type);
+    setBookingDate(new Date().toISOString().split('T')[0]);
+    setBookingTime('09:00');
+    setBookingNotes('');
+    setShowBookingModal(true);
+  };
+
+  const handleCreateBooking = async () => {
+    if (!bookingDate) {
+      alert('Välj ett datum');
+      return;
+    }
+
+    setSavingBooking(true);
+    try {
+      const res = await fetch('/api/admin/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quote_id: parseInt(id as string),
+          booking_type: bookingType,
+          scheduled_date: bookingDate,
+          scheduled_time: bookingTime,
+          notes: bookingNotes,
+        }),
+      });
+
+      if (res.ok) {
+        setShowBookingModal(false);
+        fetchBookings();
+        alert(`${bookingType === 'visit' ? 'Hembesök' : 'Installation'} bokad!`);
+      } else {
+        const error = await res.json();
+        alert(`Fel: ${error.error || 'Kunde inte skapa bokning'}`);
+      }
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      alert('Fel vid skapande av bokning');
+    }
+    setSavingBooking(false);
   };
 
   const updateRecommendation = (index: number, field: keyof BuildingPartRecommendation, value: number) => {
@@ -330,6 +406,34 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
     }
   };
 
+  const handleSendRotLink = async () => {
+    if (!quote?.rot_info_token && !rotLink) {
+      // First generate the link if it doesn't exist
+      await handleGenerateRotLink();
+    }
+
+    setSendingRotLink(true);
+    try {
+      const response = await fetch(`/api/admin/quotes/${id}/send-rot-link`, {
+        method: 'POST',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        alert(`ROT-länk skickad till ${quote?.customer_email}!`);
+        if (data.rot_link) {
+          setRotLink(data.rot_link);
+        }
+      } else {
+        const error = await response.json();
+        alert(`Fel: ${error.error || 'Kunde inte skicka e-post'}`);
+      }
+    } catch (error) {
+      console.error('Error sending ROT link:', error);
+      alert('Ett fel uppstod vid skickande av ROT-länk');
+    }
+    setSendingRotLink(false);
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString('sv-SE', {
@@ -510,8 +614,30 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                           {rotLinkCopied ? 'Kopierad!' : 'Kopiera'}
                         </button>
                       </div>
+                      <button
+                        onClick={handleSendRotLink}
+                        disabled={sendingRotLink}
+                        className="w-full px-4 py-2 bg-green-600 text-white rounded font-medium hover:bg-green-700 transition disabled:bg-gray-400 flex items-center justify-center gap-2"
+                      >
+                        {sendingRotLink ? (
+                          <>
+                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            Skickar...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            Skicka länk via e-post
+                          </>
+                        )}
+                      </button>
                       <p className="text-xs text-gray-500">
-                        Skicka denna länk till kunden för att de ska kunna fylla i ROT-uppgifter.
+                        Eller kopiera länken ovan och skicka manuellt till kunden.
                       </p>
                     </div>
                   ) : (
@@ -519,13 +645,22 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                       <p className="text-sm text-gray-600">
                         Generera en länk som kunden kan använda för att fylla i sina uppgifter för ROT-avdraget.
                       </p>
-                      <button
-                        onClick={handleGenerateRotLink}
-                        disabled={generatingRotLink}
-                        className="px-4 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 transition disabled:bg-gray-400"
-                      >
-                        {generatingRotLink ? 'Genererar...' : 'Generera ROT-länk'}
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleGenerateRotLink}
+                          disabled={generatingRotLink}
+                          className="px-4 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 transition disabled:bg-gray-400"
+                        >
+                          {generatingRotLink ? 'Genererar...' : 'Generera ROT-länk'}
+                        </button>
+                        <button
+                          onClick={handleSendRotLink}
+                          disabled={sendingRotLink}
+                          className="px-4 py-2 bg-green-600 text-white rounded font-medium hover:bg-green-700 transition disabled:bg-gray-400 flex items-center gap-2"
+                        >
+                          {sendingRotLink ? 'Skickar...' : 'Generera & skicka direkt'}
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -833,6 +968,49 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                     )}
                   </>
                 )}
+
+                {/* Booking Buttons */}
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-2">Bokningar</h3>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => openBookingModal('visit')}
+                      className="flex-1 bg-blue-50 text-blue-700 border border-blue-200 py-2 rounded-lg font-medium hover:bg-blue-100 transition text-sm"
+                    >
+                      Boka hembesök
+                    </button>
+                    <button
+                      onClick={() => openBookingModal('installation')}
+                      className="flex-1 bg-green-50 text-green-700 border border-green-200 py-2 rounded-lg font-medium hover:bg-green-100 transition text-sm"
+                    >
+                      Boka installation
+                    </button>
+                  </div>
+
+                  {/* Existing Bookings for this quote */}
+                  {quoteBookings.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {quoteBookings.map(booking => (
+                        <div
+                          key={booking.id}
+                          className={`text-sm p-2 rounded ${
+                            booking.booking_type === 'installation'
+                              ? 'bg-green-50 text-green-800'
+                              : 'bg-blue-50 text-blue-800'
+                          }`}
+                        >
+                          <div className="font-medium">
+                            {booking.booking_type === 'installation' ? 'Installation' : 'Hembesök'}
+                          </div>
+                          <div className="text-xs opacity-75">
+                            {new Date(booking.scheduled_date).toLocaleDateString('sv-SE')} {booking.scheduled_time?.slice(0, 5)}
+                            <span className="ml-2 capitalize">({booking.status})</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1155,6 +1333,98 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
       </div>
+
+      {/* Booking Modal */}
+      {showBookingModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h2 className="text-xl font-semibold text-gray-800">
+                {bookingType === 'visit' ? 'Boka hembesök' : 'Boka installation'}
+              </h2>
+              <button
+                onClick={() => setShowBookingModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {/* Customer Info */}
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="font-medium text-gray-800">{quote?.customer_name}</div>
+                <div className="text-sm text-gray-600">{quote?.customer_address}</div>
+              </div>
+
+              {/* Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Datum
+                </label>
+                <input
+                  type="date"
+                  value={bookingDate}
+                  onChange={(e) => setBookingDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                />
+              </div>
+
+              {/* Time */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tid
+                </label>
+                <select
+                  value={bookingTime}
+                  onChange={(e) => setBookingTime(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                >
+                  {['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'].map(time => (
+                    <option key={time} value={time}>{time}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Anteckningar
+                </label>
+                <textarea
+                  value={bookingNotes}
+                  onChange={(e) => setBookingNotes(e.target.value)}
+                  rows={3}
+                  placeholder="Valfria anteckningar..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 p-4 border-t bg-gray-50">
+              <button
+                onClick={() => setShowBookingModal(false)}
+                className="px-4 py-2 text-gray-700 hover:text-gray-900"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleCreateBooking}
+                disabled={savingBooking}
+                className={`px-4 py-2 text-white rounded-lg disabled:bg-gray-400 ${
+                  bookingType === 'visit'
+                    ? 'bg-blue-600 hover:bg-blue-700'
+                    : 'bg-green-600 hover:bg-green-700'
+                }`}
+              >
+                {savingBooking ? 'Skapar...' : 'Skapa bokning'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

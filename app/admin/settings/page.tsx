@@ -59,7 +59,7 @@ interface SystemSetting {
   description: string;
 }
 
-type TabType = 'pricing' | 'multipliers' | 'variables' | 'physics' | 'templates' | 'terms' | 'forecast';
+type TabType = 'pricing' | 'multipliers' | 'physics' | 'templates' | 'terms' | 'forecast';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<TabType>('pricing');
@@ -295,9 +295,8 @@ export default function SettingsPage() {
   };
 
   const tabs: { id: TabType; label: string }[] = [
-    { id: 'pricing', label: 'Prissättning' },
+    { id: 'pricing', label: 'Prissättning & Kostnader' },
     { id: 'multipliers', label: 'Projektmultiplikatorer' },
-    { id: 'variables', label: 'Kostnadsvariabler' },
     { id: 'physics', label: 'Byggnadsfysik' },
     { id: 'templates', label: 'Meddelanden' },
     { id: 'terms', label: 'Villkor' },
@@ -345,9 +344,10 @@ export default function SettingsPage() {
             </div>
 
             <div className="p-6">
-              {/* Pricing Tab */}
+              {/* Pricing Tab - Now includes cost variables */}
               {activeTab === 'pricing' && (
                 <div className="space-y-8">
+                  {/* Additional Costs */}
                   <div>
                     <h2 className="text-xl font-semibold mb-4 text-gray-900">Tilläggsavgifter</h2>
                     <div className="space-y-4">
@@ -378,55 +378,7 @@ export default function SettingsPage() {
                       ))}
                     </div>
                   </div>
-                </div>
-              )}
 
-              {/* Multipliers Tab */}
-              {activeTab === 'multipliers' && (
-                <div>
-                  <h2 className="text-xl font-semibold mb-2 text-gray-900">Projektmultiplikatorer</h2>
-                  <p className="text-gray-600 mb-4">
-                    Dessa multiplikatorer justerar <strong>arbetstiden</strong> baserat på projektets komplexitet.
-                    De påverkar inte materialåtgången.
-                  </p>
-                  <div className="space-y-4">
-                    {multipliers.map((mult) => (
-                      <div key={mult.id} className="flex items-center justify-between border-b pb-3">
-                        <div>
-                          <div className="font-medium text-gray-800 capitalize">{mult.project_type}</div>
-                          <div className="text-sm text-gray-600">{mult.description}</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            step="0.05"
-                            min="0.5"
-                            max="3.0"
-                            defaultValue={mult.multiplier}
-                            onBlur={(e) => {
-                              const newMult = parseFloat(e.target.value);
-                              if (newMult !== mult.multiplier) {
-                                updateMultiplier(mult.id, newMult);
-                              }
-                            }}
-                            className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-gray-900"
-                          />
-                          <span className="text-gray-700">× arbetstid</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                    <p className="text-sm text-blue-800">
-                      <strong>Exempel:</strong> En multiplikator på 1.2 betyder 20% längre arbetstid (och därmed högre arbetskostnad).
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Cost Variables Tab */}
-              {activeTab === 'variables' && (
-                <div className="space-y-8">
                   {/* Closed Cell Foam */}
                   <div>
                     <h3 className="text-lg font-semibold mb-4 text-green-700">Slutencellsskum</h3>
@@ -490,7 +442,7 @@ export default function SettingsPage() {
                   {/* Personnel & Equipment */}
                   <div>
                     <h3 className="text-lg font-semibold mb-4 text-gray-800">Personal & Utrustning</h3>
-                    <div className="space-y-4">
+                    <div className="grid md:grid-cols-2 gap-4">
                       {costVariables.filter(v =>
                         v.category === 'personnel' ||
                         v.category === 'equipment' ||
@@ -524,7 +476,7 @@ export default function SettingsPage() {
                   {/* Travel */}
                   <div>
                     <h3 className="text-lg font-semibold mb-4 text-purple-700">Transport & Resa</h3>
-                    <div className="space-y-4">
+                    <div className="grid md:grid-cols-2 gap-4">
                       {costVariables.filter(v => v.category === 'travel').map((variable) => (
                         <div key={variable.id} className="flex items-center justify-between border-b pb-3">
                           <div>
@@ -553,6 +505,49 @@ export default function SettingsPage() {
                 </div>
               )}
 
+              {/* Multipliers Tab */}
+              {activeTab === 'multipliers' && (
+                <div>
+                  <h2 className="text-xl font-semibold mb-2 text-gray-900">Projektmultiplikatorer</h2>
+                  <p className="text-gray-600 mb-4">
+                    Dessa multiplikatorer justerar <strong>arbetstiden</strong> baserat på projektets komplexitet.
+                    De påverkar inte materialåtgången.
+                  </p>
+                  <div className="space-y-4">
+                    {multipliers.map((mult) => (
+                      <div key={mult.id} className="flex items-center justify-between border-b pb-3">
+                        <div>
+                          <div className="font-medium text-gray-800 capitalize">{mult.project_type}</div>
+                          <div className="text-sm text-gray-600">{mult.description}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            step="0.05"
+                            min="0.5"
+                            max="3.0"
+                            defaultValue={mult.multiplier}
+                            onBlur={(e) => {
+                              const newMult = parseFloat(e.target.value);
+                              if (newMult !== mult.multiplier) {
+                                updateMultiplier(mult.id, newMult);
+                              }
+                            }}
+                            className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-gray-900"
+                          />
+                          <span className="text-gray-700">× arbetstid</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <strong>Exempel:</strong> En multiplikator på 1.2 betyder 20% längre arbetstid (och därmed högre arbetskostnad).
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Building Physics Tab */}
               {activeTab === 'physics' && (
                 <div>
@@ -560,34 +555,175 @@ export default function SettingsPage() {
                   <p className="text-gray-600 mb-4">
                     Parametrar för kondensationsberäkningar och flash-and-batt-dimensionering.
                   </p>
-                  <div className="space-y-4">
-                    {costVariables.filter(v => v.category === 'Building Physics').map((variable) => (
-                      <div key={variable.id} className="flex items-center justify-between border-b pb-3">
-                        <div>
-                          <div className="font-medium text-gray-800">{variable.description}</div>
-                          <div className="text-xs text-gray-500">{variable.variable_key}</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            step="0.01"
-                            defaultValue={variable.variable_value}
-                            onBlur={(e) => {
-                              const newValue = parseFloat(e.target.value);
-                              if (!isNaN(newValue) && newValue !== variable.variable_value) {
-                                updateCostVariable(variable.id, newValue);
-                              }
-                            }}
-                            className="w-28 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900"
-                          />
-                          <span className="text-gray-600 text-sm">{variable.variable_unit}</span>
+
+                  {costVariables.filter(v => v.category === 'building_physics').length === 0 ? (
+                    <div className="space-y-4">
+                      <p className="text-gray-500 italic">Inga byggnadsfysik-variabler hittades.</p>
+                      <button
+                        onClick={async () => {
+                          setSaving(true);
+                          try {
+                            const res = await fetch('/api/admin/setup/building-physics', { method: 'POST' });
+                            const data = await res.json();
+                            if (res.ok) {
+                              showMessage(`${data.inserted} variabler tillagda!`);
+                              loadData();
+                            } else {
+                              showMessage(data.error || 'Fel vid skapande');
+                            }
+                          } catch {
+                            showMessage('Fel vid skapande');
+                          }
+                          setSaving(false);
+                        }}
+                        disabled={saving}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400"
+                      >
+                        Skapa byggnadsfysik-variabler
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Thermal Properties */}
+                      <div>
+                        <h3 className="text-lg font-semibold mb-3 text-indigo-700">Termiska egenskaper</h3>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          {costVariables.filter(v =>
+                            v.category === 'building_physics' &&
+                            (v.variable_key.includes('lambda') || v.variable_key.includes('density'))
+                          ).map((variable) => (
+                            <div key={variable.id} className="flex items-center justify-between border-b pb-3">
+                              <div>
+                                <div className="font-medium text-gray-800">{variable.description}</div>
+                                <div className="text-xs text-gray-500">{variable.variable_key}</div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="number"
+                                  step={variable.variable_key.includes('lambda') ? '0.001' : '1'}
+                                  defaultValue={variable.variable_value}
+                                  onBlur={(e) => {
+                                    const newValue = parseFloat(e.target.value);
+                                    if (!isNaN(newValue) && newValue !== variable.variable_value) {
+                                      updateCostVariable(variable.id, newValue);
+                                    }
+                                  }}
+                                  className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900"
+                                />
+                                <span className="text-gray-600 text-sm w-16">{variable.variable_unit}</span>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    ))}
-                    {costVariables.filter(v => v.category === 'Building Physics').length === 0 && (
-                      <p className="text-gray-500 italic">Inga byggnadsfysik-variabler hittades.</p>
-                    )}
-                  </div>
+
+                      {/* Vapor Properties */}
+                      <div>
+                        <h3 className="text-lg font-semibold mb-3 text-blue-700">Ångdiffusion</h3>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          {costVariables.filter(v =>
+                            v.category === 'building_physics' &&
+                            v.variable_key.includes('sd_value')
+                          ).map((variable) => (
+                            <div key={variable.id} className="flex items-center justify-between border-b pb-3">
+                              <div>
+                                <div className="font-medium text-gray-800">{variable.description}</div>
+                                <div className="text-xs text-gray-500">{variable.variable_key}</div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  defaultValue={variable.variable_value}
+                                  onBlur={(e) => {
+                                    const newValue = parseFloat(e.target.value);
+                                    if (!isNaN(newValue) && newValue !== variable.variable_value) {
+                                      updateCostVariable(variable.id, newValue);
+                                    }
+                                  }}
+                                  className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                                />
+                                <span className="text-gray-600 text-sm w-16">{variable.variable_unit}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Condensation & Indoor Conditions */}
+                      <div>
+                        <h3 className="text-lg font-semibold mb-3 text-green-700">Kondens & inomhusklimat</h3>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          {costVariables.filter(v =>
+                            v.category === 'building_physics' &&
+                            (v.variable_key.includes('indoor') || v.variable_key.includes('safety') || v.variable_key.includes('airtightness'))
+                          ).map((variable) => (
+                            <div key={variable.id} className="flex items-center justify-between border-b pb-3">
+                              <div>
+                                <div className="font-medium text-gray-800">{variable.description}</div>
+                                <div className="text-xs text-gray-500">{variable.variable_key}</div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="number"
+                                  step={variable.variable_key.includes('safety') ? '0.5' : '1'}
+                                  defaultValue={variable.variable_value}
+                                  onBlur={(e) => {
+                                    const newValue = parseFloat(e.target.value);
+                                    if (!isNaN(newValue) && newValue !== variable.variable_value) {
+                                      updateCostVariable(variable.id, newValue);
+                                    }
+                                  }}
+                                  className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-gray-900"
+                                />
+                                <span className="text-gray-600 text-sm w-16">{variable.variable_unit}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Flash and Batt */}
+                      <div>
+                        <h3 className="text-lg font-semibold mb-3 text-orange-700">Flash-and-Batt</h3>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          {costVariables.filter(v =>
+                            v.category === 'building_physics' &&
+                            v.variable_key.includes('flash_batt')
+                          ).map((variable) => (
+                            <div key={variable.id} className="flex items-center justify-between border-b pb-3">
+                              <div>
+                                <div className="font-medium text-gray-800">{variable.description}</div>
+                                <div className="text-xs text-gray-500">{variable.variable_key}</div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="number"
+                                  step="5"
+                                  defaultValue={variable.variable_value}
+                                  onBlur={(e) => {
+                                    const newValue = parseFloat(e.target.value);
+                                    if (!isNaN(newValue) && newValue !== variable.variable_value) {
+                                      updateCostVariable(variable.id, newValue);
+                                    }
+                                  }}
+                                  className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-gray-900"
+                                />
+                                <span className="text-gray-600 text-sm w-16">{variable.variable_unit}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-indigo-50 rounded-lg">
+                        <p className="text-sm text-indigo-800">
+                          <strong>Obs:</strong> Ändringar här påverkar beräkningar för nya offerter.
+                          Befintliga offerter behöver räknas om manuellt för att använda nya värden.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -753,8 +889,10 @@ export default function SettingsPage() {
                   </p>
 
                   <div className="space-y-6">
+                    {/* Sales Conversion Rates */}
                     <div className="p-4 border rounded-lg">
-                      <h3 className="font-medium mb-4 text-gray-800">Konverteringsgrader</h3>
+                      <h3 className="font-medium mb-4 text-gray-800">Försäljningsprognos</h3>
+                      <p className="text-sm text-gray-500 mb-4">Används för att beräkna förväntade intäkter</p>
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
@@ -766,8 +904,11 @@ export default function SettingsPage() {
                               type="number"
                               min="0"
                               max="100"
-                              defaultValue={100}
-                              className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                              defaultValue={(() => {
+                                const current = settings.find(s => s.key === 'conversion_rates');
+                                return (current?.value as Record<string, number>)?.signed ?? 100;
+                              })()}
+                              className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-gray-100"
                               disabled
                             />
                             <span className="text-gray-600">%</span>
@@ -783,16 +924,17 @@ export default function SettingsPage() {
                               type="number"
                               min="0"
                               max="100"
-                              defaultValue={50}
+                              defaultValue={(() => {
+                                const current = settings.find(s => s.key === 'conversion_rates');
+                                return (current?.value as Record<string, number>)?.sent ?? 50;
+                              })()}
                               onBlur={(e) => {
                                 const rate = parseInt(e.target.value);
                                 const current = settings.find(s => s.key === 'conversion_rates');
-                                if (current) {
-                                  updateSetting('conversion_rates', {
-                                    ...(current.value as Record<string, number>),
-                                    sent: rate,
-                                  });
-                                }
+                                updateSetting('conversion_rates', {
+                                  ...(current?.value as Record<string, number>),
+                                  sent: rate,
+                                });
                               }}
                               className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
                             />
@@ -809,16 +951,106 @@ export default function SettingsPage() {
                               type="number"
                               min="0"
                               max="100"
-                              defaultValue={10}
+                              defaultValue={(() => {
+                                const current = settings.find(s => s.key === 'conversion_rates');
+                                return (current?.value as Record<string, number>)?.pending ?? 10;
+                              })()}
                               onBlur={(e) => {
                                 const rate = parseInt(e.target.value);
                                 const current = settings.find(s => s.key === 'conversion_rates');
-                                if (current) {
-                                  updateSetting('conversion_rates', {
-                                    ...(current.value as Record<string, number>),
-                                    pending: rate,
-                                  });
-                                }
+                                updateSetting('conversion_rates', {
+                                  ...(current?.value as Record<string, number>),
+                                  pending: rate,
+                                });
+                              }}
+                              className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                            />
+                            <span className="text-gray-600">%</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Material Conversion Rates */}
+                    <div className="p-4 border rounded-lg">
+                      <h3 className="font-medium mb-4 text-gray-800">Materialprognos</h3>
+                      <p className="text-sm text-gray-500 mb-4">Används för att beräkna förväntad materialåtgång (ofta lägre än försäljning)</p>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-gray-700">Signerade offerter</div>
+                            <div className="text-sm text-gray-500">Accepterade av kund</div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              defaultValue={(() => {
+                                const current = settings.find(s => s.key === 'material_conversion_rates');
+                                return (current?.value as Record<string, number>)?.signed ?? 100;
+                              })()}
+                              onBlur={(e) => {
+                                const rate = parseInt(e.target.value);
+                                const current = settings.find(s => s.key === 'material_conversion_rates');
+                                updateSetting('material_conversion_rates', {
+                                  ...(current?.value as Record<string, number>),
+                                  signed: rate,
+                                });
+                              }}
+                              className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                            />
+                            <span className="text-gray-600">%</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-gray-700">Skickade offerter</div>
+                            <div className="text-sm text-gray-500">Väntar på svar</div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              defaultValue={(() => {
+                                const current = settings.find(s => s.key === 'material_conversion_rates');
+                                return (current?.value as Record<string, number>)?.sent ?? 30;
+                              })()}
+                              onBlur={(e) => {
+                                const rate = parseInt(e.target.value);
+                                const current = settings.find(s => s.key === 'material_conversion_rates');
+                                updateSetting('material_conversion_rates', {
+                                  ...(current?.value as Record<string, number>),
+                                  sent: rate,
+                                });
+                              }}
+                              className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                            />
+                            <span className="text-gray-600">%</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-gray-700">Obesvarade förfrågningar</div>
+                            <div className="text-sm text-gray-500">Inte skickat offert ännu</div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              defaultValue={(() => {
+                                const current = settings.find(s => s.key === 'material_conversion_rates');
+                                return (current?.value as Record<string, number>)?.pending ?? 5;
+                              })()}
+                              onBlur={(e) => {
+                                const rate = parseInt(e.target.value);
+                                const current = settings.find(s => s.key === 'material_conversion_rates');
+                                updateSetting('material_conversion_rates', {
+                                  ...(current?.value as Record<string, number>),
+                                  pending: rate,
+                                });
                               }}
                               className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
                             />
@@ -831,9 +1063,8 @@ export default function SettingsPage() {
                     <div className="p-4 bg-blue-50 rounded-lg">
                       <p className="text-sm text-blue-800">
                         <strong>Så fungerar prognosen:</strong> Förväntade intäkter beräknas genom att
-                        multiplicera varje offerts värde med dess konverteringsgrad. Till exempel,
-                        en skickad offert på 50 000 kr med 50% konverteringsgrad bidrar med 25 000 kr
-                        till den projicerade intäkten.
+                        multiplicera varje offerts värde med dess konverteringsgrad. Materialprognosen
+                        har typiskt lägre konverteringsgrad då inte alla signerade affärer genomförs.
                       </p>
                     </div>
                   </div>

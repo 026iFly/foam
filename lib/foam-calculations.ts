@@ -20,7 +20,7 @@ export const INDOOR_CONDITIONS = {
   relativeHumidity: 40, // %
 } as const;
 
-// Foam properties
+// Default foam properties (can be overridden by DB values)
 export const FOAM_PROPERTIES = {
   closed_cell: {
     lambda: 0.024, // W/(m·K) - thermal conductivity
@@ -35,6 +35,50 @@ export const FOAM_PROPERTIES = {
     name: 'Öppencellsskum',
   },
 } as const;
+
+// Type for physics variables from DB
+export interface BuildingPhysicsVariables {
+  condensation_safety_margin?: number;
+  closed_cell_min_airtightness?: number;
+  flash_batt_min_open_thickness?: number;
+  indoor_temp_standard?: number;
+  indoor_rh_standard?: number;
+  closed_cell_lambda?: number;
+  open_cell_lambda?: number;
+  closed_cell_sd_value?: number;
+  open_cell_sd_value?: number;
+  closed_cell_density?: number;
+  open_cell_density?: number;
+}
+
+// Helper to get foam properties with optional DB overrides
+export function getFoamProperties(dbVars?: BuildingPhysicsVariables) {
+  return {
+    closed_cell: {
+      lambda: dbVars?.closed_cell_lambda ?? FOAM_PROPERTIES.closed_cell.lambda,
+      sd_value: dbVars?.closed_cell_sd_value ?? FOAM_PROPERTIES.closed_cell.sd_value,
+      density: dbVars?.closed_cell_density ?? FOAM_PROPERTIES.closed_cell.density,
+      name: 'Slutencellsskum',
+    },
+    open_cell: {
+      lambda: dbVars?.open_cell_lambda ?? FOAM_PROPERTIES.open_cell.lambda,
+      sd_value: dbVars?.open_cell_sd_value ?? FOAM_PROPERTIES.open_cell.sd_value,
+      density: dbVars?.open_cell_density ?? FOAM_PROPERTIES.open_cell.density,
+      name: 'Öppencellsskum',
+    },
+  };
+}
+
+// Helper to get indoor conditions with optional DB overrides
+export function getIndoorConditions(dbVars?: BuildingPhysicsVariables) {
+  return {
+    temperature: dbVars?.indoor_temp_standard ?? INDOOR_CONDITIONS.temperature,
+    relativeHumidity: dbVars?.indoor_rh_standard ?? INDOOR_CONDITIONS.relativeHumidity,
+  };
+}
+
+// Default safety margin
+export const DEFAULT_SAFETY_MARGIN = 2.0; // °C
 
 // Swedish building standard minimum U-values (W/m²K) - BBR 29
 export const BBR_U_VALUES = {
