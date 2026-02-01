@@ -441,11 +441,11 @@ export default function AdminDashboard() {
                           </div>
                           <div className={`text-xs ${stock.low_in_7_days ? 'text-orange-600 font-medium' : 'text-gray-500'}`}>
                             Om 7d: {stock.stock_in_7_days} {stock.unit}
-                            {stock.confirmed_7_days > 0 && ` (${stock.confirmed_7_days} bokade)`}
+                            {stock.confirmed_7_days > 0 && ` (${stock.confirmed_7_days} ${stock.unit} bokade)`}
                           </div>
                           <div className={`text-xs ${stock.low_in_30_days ? 'text-orange-600 font-medium' : 'text-gray-500'}`}>
                             Om 30d: {stock.stock_in_30_days} {stock.unit}
-                            {stock.projected_from_quotes > 0 && ` (inkl. ~${stock.projected_from_quotes} prognos)`}
+                            {stock.projected_from_quotes > 0 && ` (inkl. ~${stock.projected_from_quotes} ${stock.unit} från offerter)`}
                           </div>
                           {stock.is_low && (
                             <div className="text-xs text-red-600 font-medium">
