@@ -125,7 +125,7 @@ Admin can edit customer details on quote card:
 - Telefon (Phone)
 - Adress (Address)
 
-#### Offer Signing (Digital Signature)
+#### Offer Signing (Digital Signature) ✅ IMPLEMENTED
 Simple digital signature that records:
 - Customer name (typed signature)
 - Offer number
@@ -134,18 +134,37 @@ Simple digital signature that records:
 - IP address
 - Status updates: pending → sent → accepted/rejected
 
+**Implementation:**
+- Customer offer page: `/offert/[token]`
+- API routes: `/api/offer/[token]`, `/api/offer/[token]/accept`, `/api/offer/[token]/reject`
+- Send offer: `/api/admin/quotes/[id]/send-offer`
+- Fields added to quote_requests: offer_token, accepted_at, rejected_at, signed_name, signed_ip
+
 #### Booking from Quote Page
 Even before sending offer, admin can:
 - Schedule a visit (hembesök)
 - Schedule an installation
 - This enables material projection on dashboard
 
-### 4. Email System
+### 4. Email System ✅ IMPLEMENTED
 
 #### Configuration
-- **SMTP Server**: TBD (need server details for pelle@gronteknik.nu)
-- **From Address**: pelle@gronteknik.nu
-- **Reply-To**: pelle@gronteknik.nu
+- **SMTP Server**: smtp.gmail.com (port 587, TLS)
+- **From Address**: foam@gronteknik.nu (via Gmail)
+- **Auth User**: pelle@gronteknik.nu with app password
+- **Library**: nodemailer
+
+#### Environment Variables
+```
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=pelle@gronteknik.nu
+SMTP_PASS=[Gmail app password]
+SMTP_FROM=foam@gronteknik.nu
+```
+
+#### Files
+- `/lib/email.ts` - Email sending utilities and template handling
 
 #### Message Templates (stored in database)
 ```typescript
@@ -197,23 +216,21 @@ interface TermsCondition {
 - **NEW**: Email ROT link to customer with editable template
 - Template editable in settings AND before sending
 
-### 7. Discord Integration
+### 7. Discord Integration ✅ IMPLEMENTED
 
-#### Setup Required
-Need Discord webhook URL from channel settings:
-1. Go to Discord channel → Edit Channel → Integrations → Webhooks
-2. Create "Intellifoam" webhook
-3. Copy webhook URL
+#### Configuration
+- **Webhook URL**: Set in Vercel env as `DISCORD_WEBHOOK_URL`
+- **File**: `/lib/discord.ts`
 
-#### Notification Types
-- 🆕 Ny offertförfrågan (New quote request)
-- ✅ Offert accepterad (Offer accepted)
-- ❌ Offert avböjd (Offer rejected)
-- 📦 Materialbrist - dags att beställa (Low stock alert)
-- 🚚 Leverans anländer [datum] (Shipment arriving)
-- 📅 Installation bokad (Installation booked)
-- 🏠 Hembesök bokat (Visit booked)
-- ⚠️ Ingen respons på offert efter X dagar (No response alert)
+#### Notification Types Implemented
+- 🆕 Ny offertförfrågan (New quote request) - notifyNewQuoteRequest
+- 📧 Offert skickad (Offer sent) - notifyOfferSent
+- ✅ Offert accepterad (Offer accepted) - notifyOfferAccepted
+- ❌ Offert avböjd (Offer rejected) - notifyOfferRejected
+- 📦 Materialbrist (Low stock alert) - notifyLowStock
+- 🚚 Leverans anländer (Shipment arriving) - notifyShipmentArriving
+- 📅 Installation bokad (Installation booked) - notifyInstallationBooked
+- Custom messages - sendCustomNotification
 
 #### n8n Integration
 - Server: n8n.gronteknik.nu
