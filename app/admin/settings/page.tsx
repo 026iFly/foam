@@ -1098,6 +1098,40 @@ export default function SettingsPage() {
                         har typiskt lägre konverteringsgrad då inte alla signerade affärer genomförs.
                       </p>
                     </div>
+
+                    {/* System Tools */}
+                    <div className="p-4 border rounded-lg mt-6">
+                      <h3 className="font-medium mb-4 text-gray-800">Systemverktyg</h3>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-gray-700">Uppdatera bokningar</div>
+                            <div className="text-sm text-gray-500">Lägg till materialdata för befintliga installationsbokningar</div>
+                          </div>
+                          <button
+                            onClick={async () => {
+                              setSaving(true);
+                              try {
+                                const res = await fetch('/api/admin/setup/backfill-booking-materials', { method: 'POST' });
+                                const data = await res.json();
+                                if (res.ok) {
+                                  showMessage(`${data.backfilled} bokningar uppdaterade!`);
+                                } else {
+                                  showMessage(data.error || 'Fel vid uppdatering');
+                                }
+                              } catch {
+                                showMessage('Fel vid uppdatering');
+                              }
+                              setSaving(false);
+                            }}
+                            disabled={saving}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                          >
+                            Kör uppdatering
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
