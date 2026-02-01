@@ -1554,8 +1554,8 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                   <h3 className="font-medium text-gray-800 mb-2">Signaturinformation</h3>
                   <div className="text-sm text-gray-600 space-y-1">
                     <p><strong>Signerad av:</strong> {quote.signed_name}</p>
-                    {quote.signed_at && (
-                      <p><strong>Signerad:</strong> {new Date(quote.signed_at).toLocaleString('sv-SE')}</p>
+                    {quote.accepted_at && (
+                      <p><strong>Signerad:</strong> {new Date(quote.accepted_at).toLocaleString('sv-SE')}</p>
                     )}
                     {quote.signed_ip && (
                       <p><strong>IP-adress:</strong> {quote.signed_ip}</p>

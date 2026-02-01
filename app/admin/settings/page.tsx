@@ -513,6 +513,34 @@ export default function SettingsPage() {
                     Dessa multiplikatorer justerar <strong>arbetstiden</strong> baserat på projektets komplexitet.
                     De påverkar inte materialåtgången.
                   </p>
+
+                  {multipliers.length === 0 ? (
+                    <div className="space-y-4">
+                      <p className="text-gray-500 italic">Inga multiplikatorer hittades.</p>
+                      <button
+                        onClick={async () => {
+                          setSaving(true);
+                          try {
+                            const res = await fetch('/api/admin/setup/project-multipliers', { method: 'POST' });
+                            const data = await res.json();
+                            if (res.ok) {
+                              showMessage(`${data.inserted} multiplikatorer tillagda!`);
+                              loadData();
+                            } else {
+                              showMessage(data.error || 'Fel vid skapande');
+                            }
+                          } catch {
+                            showMessage('Fel vid skapande');
+                          }
+                          setSaving(false);
+                        }}
+                        disabled={saving}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400"
+                      >
+                        Skapa standardmultiplikatorer
+                      </button>
+                    </div>
+                  ) : (
                   <div className="space-y-4">
                     {multipliers.map((mult) => (
                       <div key={mult.id} className="flex items-center justify-between border-b pb-3">
@@ -540,11 +568,14 @@ export default function SettingsPage() {
                       </div>
                     ))}
                   </div>
-                  <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                    <p className="text-sm text-blue-800">
-                      <strong>Exempel:</strong> En multiplikator på 1.2 betyder 20% längre arbetstid (och därmed högre arbetskostnad).
-                    </p>
-                  </div>
+                  )}
+                  {multipliers.length > 0 && (
+                    <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        <strong>Exempel:</strong> En multiplikator på 1.2 betyder 20% längre arbetstid (och därmed högre arbetskostnad).
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
