@@ -3,447 +3,509 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-interface PricingConfig {
-  id: number;
-  foam_type: string;
-  thickness_mm: number;
-  price_per_m2_excl_vat: number;
-  is_active: number;
+interface QuoteCounts {
+  pending: number;
+  reviewed: number;
+  quoted: number;
+  sent: number;
+  accepted: number;
+  rejected: number;
+  all: number;
 }
 
-interface AdditionalCost {
+interface Quote {
   id: number;
-  cost_type: string;
-  description: string | null;
-  amount: number;
-  unit: string | null;
-  is_active: number;
+  customer_name: string;
+  customer_email: string;
+  customer_address: string;
+  status: string;
+  total_excl_vat: number;
+  total_incl_vat: number;
+  created_at: string;
+  email_sent_at: string | null;
+  accepted_at: string | null;
+  quote_number: string | null;
+  apply_rot_deduction: boolean;
+  rot_customer_info: string | null;
 }
 
-interface ProjectMultiplier {
+interface Booking {
   id: number;
-  project_type: string;
-  multiplier: number;
-  description: string | null;
-  is_active: number;
+  quote_id: number;
+  booking_type: 'visit' | 'installation';
+  scheduled_date: string;
+  scheduled_time: string;
+  status: string;
+  customer_name: string;
+  customer_address: string;
+  quote_value: number;
 }
 
-interface CostVariable {
+interface StockLevel {
   id: number;
-  variable_key: string;
-  variable_value: number;
-  variable_unit: string | null;
-  description: string | null;
-  category: string | null;
-  updated_at: string;
+  name: string;
+  unit: string;
+  current_stock: number;
+  minimum_stock: number;
+  is_low: boolean;
+  reserved_7_days: number;
+  reserved_30_days: number;
+  incoming_7_days: number;
+  incoming_30_days: number;
 }
 
-export default function AdminPage() {
-  const [pricing, setPricing] = useState<PricingConfig[]>([]);
-  const [additionalCosts, setAdditionalCosts] = useState<AdditionalCost[]>([]);
-  const [multipliers, setMultipliers] = useState<ProjectMultiplier[]>([]);
-  const [costVariables, setCostVariables] = useState<CostVariable[]>([]);
+interface TodoItem {
+  id: string;
+  type: 'review' | 'send_offer' | 'send_rot' | 'follow_up' | 'book_installation' | 'low_stock' | 'shipment_arriving';
+  title: string;
+  description: string;
+  quote_id?: number;
+  priority: 'high' | 'medium' | 'low';
+  created_at: string;
+}
+
+export default function AdminDashboard() {
+  const [counts, setCounts] = useState<QuoteCounts | null>(null);
+  const [recentQuotes, setRecentQuotes] = useState<Quote[]>([]);
+  const [upcomingBookings, setUpcomingBookings] = useState<Booking[]>([]);
+  const [stockLevels, setStockLevels] = useState<StockLevel[]>([]);
+  const [todos, setTodos] = useState<TodoItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
 
   useEffect(() => {
-    loadData();
+    loadDashboardData();
   }, []);
 
-  const loadData = async () => {
+  const loadDashboardData = async () => {
     try {
-      const [pricingRes, costVarsRes] = await Promise.all([
-        fetch('/api/admin/pricing'),
-        fetch('/api/admin/cost-variables')
-      ]);
+      // Load quote counts and recent quotes
+      const quotesRes = await fetch('/api/admin/quotes');
+      const quotesData = await quotesRes.json();
 
-      const pricingData = await pricingRes.json();
-      const costVarsData = await costVarsRes.json();
+      setCounts(quotesData.counts);
+      setRecentQuotes(quotesData.quotes?.slice(0, 5) || []);
 
-      setPricing(pricingData.pricing || []);
-      setAdditionalCosts(pricingData.additionalCosts || []);
-      setMultipliers(pricingData.multipliers || []);
-      setCostVariables(costVarsData.variables || []);
+      // Generate todos based on quotes
+      const generatedTodos: TodoItem[] = [];
+      const quotes = quotesData.quotes || [];
+
+      for (const quote of quotes) {
+        // Review new requests
+        if (quote.status === 'pending') {
+          generatedTodos.push({
+            id: `review-${quote.id}`,
+            type: 'review',
+            title: 'Granska ny offertförfrågan',
+            description: `${quote.customer_name} - ${quote.customer_address}`,
+            quote_id: quote.id,
+            priority: 'high',
+            created_at: quote.created_at,
+          });
+        }
+
+        // Send offer for reviewed quotes
+        if (quote.status === 'reviewed' || quote.status === 'quoted') {
+          generatedTodos.push({
+            id: `send-${quote.id}`,
+            type: 'send_offer',
+            title: 'Skicka offert till kund',
+            description: `${quote.customer_name} - ${formatCurrency(quote.total_incl_vat || quote.total_excl_vat)}`,
+            quote_id: quote.id,
+            priority: 'medium',
+            created_at: quote.created_at,
+          });
+        }
+
+        // Send ROT link for accepted quotes without ROT info
+        if (quote.status === 'accepted' && quote.apply_rot_deduction && !quote.rot_customer_info) {
+          generatedTodos.push({
+            id: `rot-${quote.id}`,
+            type: 'send_rot',
+            title: 'Skicka länk för ROT-underlag',
+            description: `${quote.customer_name}`,
+            quote_id: quote.id,
+            priority: 'high',
+            created_at: quote.accepted_at || quote.created_at,
+          });
+        }
+
+        // Book installation for accepted quotes
+        if (quote.status === 'accepted') {
+          generatedTodos.push({
+            id: `book-${quote.id}`,
+            type: 'book_installation',
+            title: 'Boka installation',
+            description: `${quote.customer_name} - ${quote.customer_address}`,
+            quote_id: quote.id,
+            priority: 'medium',
+            created_at: quote.accepted_at || quote.created_at,
+          });
+        }
+
+        // Follow up on sent quotes older than 7 days
+        if (quote.status === 'sent' && quote.email_sent_at) {
+          const sentDate = new Date(quote.email_sent_at);
+          const daysSince = Math.floor((Date.now() - sentDate.getTime()) / (1000 * 60 * 60 * 24));
+          if (daysSince >= 7) {
+            generatedTodos.push({
+              id: `followup-${quote.id}`,
+              type: 'follow_up',
+              title: `Följ upp offert (${daysSince} dagar)`,
+              description: `${quote.customer_name} - ${quote.quote_number || 'Offert'}`,
+              quote_id: quote.id,
+              priority: 'low',
+              created_at: quote.email_sent_at,
+            });
+          }
+        }
+      }
+
+      setTodos(generatedTodos.slice(0, 10));
+
+      // Try to load bookings (may not exist yet)
+      try {
+        const bookingsRes = await fetch('/api/admin/bookings');
+        if (bookingsRes.ok) {
+          const bookingsData = await bookingsRes.json();
+          setUpcomingBookings(bookingsData.bookings || []);
+        }
+      } catch {
+        // Bookings API not ready yet
+      }
+
+      // Try to load stock levels (may not exist yet)
+      try {
+        const materialsRes = await fetch('/api/admin/materials');
+        if (materialsRes.ok) {
+          const materialsData = await materialsRes.json();
+          setStockLevels(materialsData.materials || []);
+        }
+      } catch {
+        // Materials API not ready yet
+      }
+
       setLoading(false);
     } catch (err) {
-      console.error('Failed to load data:', err);
+      console.error('Failed to load dashboard:', err);
       setLoading(false);
     }
   };
 
-  const updatePricing = async (id: number, price: number) => {
-    setSaving(true);
-    try {
-      await fetch('/api/admin/pricing', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'pricing', id, value: price }),
-      });
-      setMessage('Pris uppdaterat!');
-      setTimeout(() => setMessage(''), 3000);
-      loadData();
-    } catch (err) {
-      setMessage('Fel vid uppdatering');
-    }
-    setSaving(false);
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('sv-SE', {
+      style: 'currency',
+      currency: 'SEK',
+      maximumFractionDigits: 0,
+    }).format(amount);
   };
 
-  const updateAdditionalCost = async (id: number, amount: number) => {
-    setSaving(true);
-    try {
-      await fetch('/api/admin/pricing', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'additional_cost', id, value: amount }),
-      });
-      setMessage('Kostnad uppdaterad!');
-      setTimeout(() => setMessage(''), 3000);
-      loadData();
-    } catch (err) {
-      setMessage('Fel vid uppdatering');
-    }
-    setSaving(false);
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('sv-SE', {
+      day: 'numeric',
+      month: 'short',
+    });
   };
 
-  const updateMultiplier = async (id: number, multiplier: number) => {
-    setSaving(true);
-    try {
-      await fetch('/api/admin/pricing', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'multiplier', id, value: multiplier }),
-      });
-      setMessage('Multiplikator uppdaterad!');
-      setTimeout(() => setMessage(''), 3000);
-      loadData();
-    } catch (err) {
-      setMessage('Fel vid uppdatering');
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'reviewed': return 'bg-blue-100 text-blue-800';
+      case 'quoted': return 'bg-purple-100 text-purple-800';
+      case 'sent': return 'bg-indigo-100 text-indigo-800';
+      case 'accepted': return 'bg-green-100 text-green-800';
+      case 'rejected': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
-    setSaving(false);
   };
 
-  const updateCostVariable = async (id: number, value: number) => {
-    setSaving(true);
-    try {
-      await fetch('/api/admin/cost-variables', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, variable_value: value }),
-      });
-      setMessage('Kostnadsvariabel uppdaterad!');
-      setTimeout(() => setMessage(''), 3000);
-      loadData();
-    } catch (err) {
-      setMessage('Fel vid uppdatering');
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending': return 'Ny';
+      case 'reviewed': return 'Granskad';
+      case 'quoted': return 'Offert skapad';
+      case 'sent': return 'Skickad';
+      case 'accepted': return 'Accepterad';
+      case 'rejected': return 'Avböjd';
+      default: return status;
     }
-    setSaving(false);
   };
+
+  const getTodoPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'border-l-red-500';
+      case 'medium': return 'border-l-yellow-500';
+      case 'low': return 'border-l-gray-300';
+      default: return 'border-l-gray-300';
+    }
+  };
+
+  // Calculate projections
+  const projectedRevenue = recentQuotes.reduce((sum, q) => {
+    const value = q.total_incl_vat || q.total_excl_vat || 0;
+    let rate = 0.1; // pending
+    if (q.status === 'sent') rate = 0.5;
+    if (q.status === 'accepted') rate = 1.0;
+    return sum + (value * rate);
+  }, 0);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-900">Laddar...</div>
+        <div className="text-gray-600">Laddar dashboard...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
+    <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-800">Admin Dashboard</h1>
-            <Link
-              href="/"
-              className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition"
-            >
-              Tillbaka till sajten
-            </Link>
-          </div>
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-3xl font-bold text-gray-800 mb-8">Dashboard</h1>
 
-          {/* Quick Links */}
-          <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900">Snabblänkar</h2>
-            <div className="flex flex-wrap gap-4">
-              <Link
-                href="/admin/quotes"
-                className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition font-medium"
-              >
-                Offertförfrågningar
-              </Link>
-              <Link
-                href="/admin/users"
-                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-medium"
-              >
-                Hantera användare
-              </Link>
-              <Link
-                href="/admin/profile"
-                className="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition font-medium"
-              >
-                Min profil
-              </Link>
+          {/* Statistics Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="text-3xl font-bold text-yellow-600">{counts?.pending || 0}</div>
+              <div className="text-sm text-gray-600">Nya förfrågningar</div>
+            </div>
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="text-3xl font-bold text-indigo-600">{counts?.sent || 0}</div>
+              <div className="text-sm text-gray-600">Skickade offerter</div>
+            </div>
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="text-3xl font-bold text-green-600">{counts?.accepted || 0}</div>
+              <div className="text-sm text-gray-600">Accepterade</div>
+            </div>
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="text-3xl font-bold text-gray-600">{counts?.all || 0}</div>
+              <div className="text-sm text-gray-600">Totalt</div>
             </div>
           </div>
 
-          {message && (
-            <div className="mb-6 p-4 bg-green-100 text-green-700 rounded-lg">
-              {message}
-            </div>
-          )}
-
-          {/* Additional Costs */}
-          <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-            <h2 className="text-2xl font-semibold mb-6 text-gray-900">Tilläggsavgifter</h2>
-            <div className="space-y-4">
-              {additionalCosts.map((cost) => (
-                <div key={cost.id} className="flex items-center justify-between border-b pb-3">
-                  <div>
-                    <div className="font-medium text-gray-800">{cost.description}</div>
-                    <div className="text-sm text-gray-800">
-                      {cost.cost_type} • {cost.unit}
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* Left Column - To-do list */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* To-do List */}
+              <div className="bg-white rounded-lg shadow">
+                <div className="p-4 border-b border-gray-200">
+                  <h2 className="text-lg font-semibold text-gray-800">Att göra</h2>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {todos.length === 0 ? (
+                    <div className="p-6 text-center text-gray-500">
+                      Inga uppgifter just nu. Bra jobbat!
                     </div>
+                  ) : (
+                    todos.map((todo) => (
+                      <Link
+                        key={todo.id}
+                        href={todo.quote_id ? `/admin/quotes/${todo.quote_id}` : '/admin/quotes'}
+                        className={`block p-4 hover:bg-gray-50 border-l-4 ${getTodoPriorityColor(todo.priority)}`}
+                      >
+                        <div className="font-medium text-gray-800">{todo.title}</div>
+                        <div className="text-sm text-gray-500">{todo.description}</div>
+                      </Link>
+                    ))
+                  )}
+                </div>
+                {todos.length > 0 && (
+                  <div className="p-3 border-t border-gray-200 bg-gray-50">
+                    <Link
+                      href="/admin/quotes"
+                      className="text-sm text-green-600 hover:text-green-700 font-medium"
+                    >
+                      Visa alla offerter →
+                    </Link>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      step={cost.unit === 'percent' ? '1' : '100'}
-                      defaultValue={cost.amount}
-                      onBlur={(e) => {
-                        const newAmount = parseFloat(e.target.value);
-                        if (newAmount !== cost.amount) {
-                          updateAdditionalCost(cost.id, newAmount);
-                        }
-                      }}
-                      className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-gray-900"
-                    />
-                    <span className="text-gray-900">
-                      {cost.unit === 'percent' ? '%' : 'kr'}
-                    </span>
+                )}
+              </div>
+
+              {/* Recent Quotes */}
+              <div className="bg-white rounded-lg shadow">
+                <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+                  <h2 className="text-lg font-semibold text-gray-800">Senaste offertförfrågningar</h2>
+                  <Link
+                    href="/admin/quotes"
+                    className="text-sm text-green-600 hover:text-green-700"
+                  >
+                    Visa alla
+                  </Link>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {recentQuotes.length === 0 ? (
+                    <div className="p-6 text-center text-gray-500">
+                      Inga offertförfrågningar ännu.
+                    </div>
+                  ) : (
+                    recentQuotes.map((quote) => (
+                      <Link
+                        key={quote.id}
+                        href={`/admin/quotes/${quote.id}`}
+                        className="block p-4 hover:bg-gray-50"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="font-medium text-gray-800">{quote.customer_name}</div>
+                            <div className="text-sm text-gray-500">{quote.customer_address}</div>
+                          </div>
+                          <div className="text-right">
+                            <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusColor(quote.status)}`}>
+                              {getStatusLabel(quote.status)}
+                            </span>
+                            <div className="text-sm text-gray-600 mt-1">
+                              {formatCurrency(quote.total_incl_vat || quote.total_excl_vat || 0)}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-400 mt-2">
+                          {formatDate(quote.created_at)}
+                        </div>
+                      </Link>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column - Stock & Calendar */}
+            <div className="space-y-6">
+              {/* Quick Actions */}
+              <div className="bg-white rounded-lg shadow p-4">
+                <h2 className="text-lg font-semibold text-gray-800 mb-4">Snabbval</h2>
+                <div className="space-y-2">
+                  <Link
+                    href="/admin/quotes"
+                    className="block w-full text-left px-4 py-3 bg-green-50 text-green-700 rounded-lg hover:bg-green-100"
+                  >
+                    📋 Alla offerter
+                  </Link>
+                  <Link
+                    href="/admin/inventory"
+                    className="block w-full text-left px-4 py-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100"
+                  >
+                    📦 Lagerstatus
+                  </Link>
+                  <Link
+                    href="/admin/calendar"
+                    className="block w-full text-left px-4 py-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100"
+                  >
+                    📅 Kalender
+                  </Link>
+                  <Link
+                    href="/admin/settings"
+                    className="block w-full text-left px-4 py-3 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100"
+                  >
+                    ⚙️ Inställningar
+                  </Link>
+                </div>
+              </div>
+
+              {/* Stock Levels */}
+              <div className="bg-white rounded-lg shadow">
+                <div className="p-4 border-b border-gray-200">
+                  <h2 className="text-lg font-semibold text-gray-800">Lagerprognos</h2>
+                </div>
+                <div className="p-4">
+                  {stockLevels.length === 0 ? (
+                    <div className="text-sm text-gray-500">
+                      Lagerdata inte tillgänglig. Kör databasen migreringen.
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {stockLevels.map((stock) => (
+                        <div key={stock.id} className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="font-medium text-gray-700">{stock.name}</span>
+                            <span className={stock.is_low ? 'text-red-600 font-bold' : 'text-gray-600'}>
+                              {stock.current_stock} {stock.unit}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Om 7d: {stock.current_stock - stock.reserved_7_days + stock.incoming_7_days} {stock.unit}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Om 30d: {stock.current_stock - stock.reserved_30_days + stock.incoming_30_days} {stock.unit}
+                          </div>
+                          {stock.is_low && (
+                            <div className="text-xs text-red-600 font-medium">
+                              ⚠️ Under minimigräns ({stock.minimum_stock} {stock.unit})
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="p-3 border-t border-gray-200 bg-gray-50">
+                  <Link
+                    href="/admin/inventory"
+                    className="text-sm text-green-600 hover:text-green-700 font-medium"
+                  >
+                    Hantera lager →
+                  </Link>
+                </div>
+              </div>
+
+              {/* Revenue Projection */}
+              <div className="bg-white rounded-lg shadow p-4">
+                <h2 className="text-lg font-semibold text-gray-800 mb-3">Prognos</h2>
+                <div className="space-y-3">
+                  <div>
+                    <div className="text-2xl font-bold text-green-600">
+                      {formatCurrency(projectedRevenue)}
+                    </div>
+                    <div className="text-sm text-gray-500">Projicerade intäkter</div>
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    Baserat på konverteringsgrader: 100% accepterade, 50% skickade, 10% nya
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
 
-          {/* Project Multipliers */}
-          <div className="bg-white rounded-lg shadow-md p-8">
-            <h2 className="text-2xl font-semibold mb-6 text-gray-900">Projekttypsmultiplikatorer</h2>
-            <p className="text-gray-900 mb-4">
-              Dessa multiplikatorer justerar priset baserat på projektets komplexitet.
-            </p>
-            <div className="space-y-4">
-              {multipliers.map((mult) => (
-                <div key={mult.id} className="flex items-center justify-between border-b pb-3">
-                  <div>
-                    <div className="font-medium text-gray-800 capitalize">{mult.project_type}</div>
-                    <div className="text-sm text-gray-800">{mult.description}</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      step="0.05"
-                      min="0.5"
-                      max="2.0"
-                      defaultValue={mult.multiplier}
-                      onBlur={(e) => {
-                        const newMult = parseFloat(e.target.value);
-                        if (newMult !== mult.multiplier) {
-                          updateMultiplier(mult.id, newMult);
-                        }
-                      }}
-                      className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-gray-900"
-                    />
-                    <span className="text-gray-900">×</span>
-                  </div>
+              {/* Upcoming Bookings */}
+              <div className="bg-white rounded-lg shadow">
+                <div className="p-4 border-b border-gray-200">
+                  <h2 className="text-lg font-semibold text-gray-800">Kommande</h2>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Cost Variables */}
-          <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-            <h2 className="text-2xl font-semibold mb-6 text-gray-900">Kostnadsmodell & Kalkylvariabler</h2>
-            <p className="text-gray-900 mb-6">
-              Dessa variabler används för att beräkna priser baserat på material, arbetskostnad och transport.
-            </p>
-
-            {/* Closed Cell Foam */}
-            <div className="mb-8">
-              <h3 className="text-xl font-semibold mb-4 text-green-700">Slutencellsskum</h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                {costVariables.filter(v => v.category === 'closed_foam').map((variable) => (
-                  <div key={variable.id} className="flex items-center justify-between border-b pb-3">
-                    <div>
-                      <div className="font-medium text-gray-800">{variable.description}</div>
-                      <div className="text-sm text-gray-700">{variable.variable_key}</div>
+                <div className="p-4">
+                  {upcomingBookings.length === 0 ? (
+                    <div className="text-sm text-gray-500">
+                      Inga bokade besök eller installationer.
                     </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        step={variable.variable_unit?.includes('%') ? '1' : '0.1'}
-                        defaultValue={variable.variable_value}
-                        onBlur={(e) => {
-                          const newValue = parseFloat(e.target.value);
-                          if (newValue !== variable.variable_value) {
-                            updateCostVariable(variable.id, newValue);
-                          }
-                        }}
-                        className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-gray-900"
-                      />
-                      <span className="text-gray-900 text-sm">{variable.variable_unit}</span>
+                  ) : (
+                    <div className="space-y-3">
+                      {upcomingBookings.slice(0, 5).map((booking) => (
+                        <div
+                          key={booking.id}
+                          className="flex items-center gap-3 text-sm"
+                        >
+                          <span className={`w-2 h-2 rounded-full ${
+                            booking.booking_type === 'installation' ? 'bg-green-500' : 'bg-blue-500'
+                          }`} />
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-700">
+                              {booking.booking_type === 'installation' ? 'Installation' : 'Hembesök'}
+                            </div>
+                            <div className="text-gray-500">{booking.customer_name}</div>
+                          </div>
+                          <div className="text-gray-500">
+                            {formatDate(booking.scheduled_date)}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                ))}
+                  )}
+                </div>
+                <div className="p-3 border-t border-gray-200 bg-gray-50">
+                  <Link
+                    href="/admin/calendar"
+                    className="text-sm text-green-600 hover:text-green-700 font-medium"
+                  >
+                    Öppna kalendern →
+                  </Link>
+                </div>
               </div>
             </div>
-
-            {/* Open Cell Foam */}
-            <div className="mb-8">
-              <h3 className="text-xl font-semibold mb-4 text-blue-700">Öppencellsskum</h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                {costVariables.filter(v => v.category === 'open_foam').map((variable) => (
-                  <div key={variable.id} className="flex items-center justify-between border-b pb-3">
-                    <div>
-                      <div className="font-medium text-gray-800">{variable.description}</div>
-                      <div className="text-sm text-gray-700">{variable.variable_key}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        step={variable.variable_unit?.includes('%') ? '1' : '0.1'}
-                        defaultValue={variable.variable_value}
-                        onBlur={(e) => {
-                          const newValue = parseFloat(e.target.value);
-                          if (newValue !== variable.variable_value) {
-                            updateCostVariable(variable.id, newValue);
-                          }
-                        }}
-                        className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
-                      />
-                      <span className="text-gray-900 text-sm">{variable.variable_unit}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Personnel & Equipment */}
-            <div className="mb-8">
-              <h3 className="text-xl font-semibold mb-4 text-gray-800">Personal & Utrustning</h3>
-              <div className="space-y-4">
-                {costVariables.filter(v => v.category === 'personnel' || v.category === 'equipment' || v.category === 'Personnel & Equipment').map((variable) => (
-                  <div key={variable.id} className="flex items-center justify-between border-b pb-3">
-                    <div>
-                      <div className="font-medium text-gray-800">{variable.description}</div>
-                      <div className="text-sm text-gray-700">{variable.variable_key}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        step="50"
-                        defaultValue={variable.variable_value}
-                        onBlur={(e) => {
-                          const newValue = parseFloat(e.target.value);
-                          if (newValue !== variable.variable_value) {
-                            updateCostVariable(variable.id, newValue);
-                          }
-                        }}
-                        className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 text-gray-900"
-                      />
-                      <span className="text-gray-900 text-sm">{variable.variable_unit}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Travel */}
-            <div className="mb-8">
-              <h3 className="text-xl font-semibold mb-4 text-purple-700">Transport & Resa</h3>
-              <div className="space-y-4">
-                {costVariables.filter(v => v.category === 'travel' || v.category === 'Travel & Transportation').map((variable) => (
-                  <div key={variable.id} className="flex items-center justify-between border-b pb-3">
-                    <div>
-                      <div className="font-medium text-gray-800">{variable.description}</div>
-                      <div className="text-sm text-gray-700">{variable.variable_key}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {variable.variable_key === 'company_address' ? (
-                        <span className="text-gray-900 font-medium">{variable.description}</span>
-                      ) : (
-                        <>
-                          <input
-                            type="number"
-                            step={variable.variable_key === 'travel_cost_per_km' ? '1' : '50'}
-                            defaultValue={variable.variable_value}
-                            onBlur={(e) => {
-                              const newValue = parseFloat(e.target.value);
-                              if (newValue !== variable.variable_value) {
-                                updateCostVariable(variable.id, newValue);
-                              }
-                            }}
-                            className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-gray-900"
-                          />
-                          <span className="text-gray-900 text-sm">{variable.variable_unit}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Building Physics */}
-            <div>
-              <h3 className="text-xl font-semibold mb-4 text-indigo-700">Byggnadsfysik</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Parametrar för kondensationsberäkningar och flash-and-batt-dimensionering.
-              </p>
-              <div className="space-y-4">
-                {costVariables.filter(v => v.category === 'Building Physics').map((variable) => (
-                  <div key={variable.id} className="flex items-center justify-between border-b pb-3">
-                    <div>
-                      <div className="font-medium text-gray-800">{variable.description}</div>
-                      <div className="text-sm text-gray-700">{variable.variable_key}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {variable.variable_key === 'foam_density_closed' || variable.variable_key === 'foam_density_open' ? (
-                        <span className="text-gray-900">{variable.variable_value} {variable.variable_unit}</span>
-                      ) : (
-                        <>
-                          <input
-                            type="number"
-                            step="0.1"
-                            defaultValue={variable.variable_value}
-                            onBlur={(e) => {
-                              const newValue = parseFloat(e.target.value);
-                              if (newValue !== variable.variable_value && !isNaN(newValue)) {
-                                updateCostVariable(variable.id, newValue);
-                              }
-                            }}
-                            className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-900"
-                          />
-                          <span className="text-gray-900 text-sm">{variable.variable_unit}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Info Panel */}
-          <div className="mt-8 bg-blue-50 border-l-4 border-blue-500 p-6 rounded">
-            <h3 className="font-semibold text-blue-900 mb-2">Information</h3>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Alla priser är exklusive moms (25% moms läggs på automatiskt i kalkylatorn)</li>
-              <li>• Ändringar sparas automatiskt när du klickar utanför fältet</li>
-              <li>• Kostnadsmodellen beräknar: Material (kg × kostnad + marginal) + Arbetskostnad (tid × timpris) + Transport</li>
-              <li>• Multiplikatorer påverkar totalpriset (1.0 = normalpris, 1.2 = 20% dyrare)</li>
-            </ul>
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { saveContactSubmission } from '@/lib/queries';
 import { createQuoteRequest } from '@/lib/quotes';
+import { notifyNewQuoteRequest } from '@/lib/discord';
 import type { CalculationData } from '@/lib/types/quote';
 
 export async function POST(request: Request) {
@@ -38,6 +39,14 @@ export async function POST(request: Request) {
         total_incl_vat: calculationData.totals?.totalInclVat,
         rot_deduction: calculationData.totals?.rotDeduction,
       });
+
+      // Send Discord notification (don't await to not block response)
+      notifyNewQuoteRequest({
+        id: quoteId,
+        customer_name: body.name,
+        customer_address: body.customer_address,
+        total_incl_vat: calculationData.totals?.totalInclVat,
+      }).catch(err => console.error('Discord notification failed:', err));
 
       return NextResponse.json({
         success: true,

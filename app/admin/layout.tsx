@@ -36,12 +36,30 @@ export default async function AdminLayout({
                 >
                   Offerter
                 </Link>
+                <Link
+                  href="/admin/inventory"
+                  className="text-sm text-gray-600 hover:text-gray-900"
+                >
+                  Lager
+                </Link>
+                <Link
+                  href="/admin/calendar"
+                  className="text-sm text-gray-600 hover:text-gray-900"
+                >
+                  Kalender
+                </Link>
+                <Link
+                  href="/admin/settings"
+                  className="text-sm text-gray-600 hover:text-gray-900"
+                >
+                  Inställningar
+                </Link>
                 {isAdmin && (
                   <Link
                     href="/admin/users"
                     className="text-sm text-gray-600 hover:text-gray-900"
                   >
-                    Anvandare
+                    Användare
                   </Link>
                 )}
               </nav>
@@ -92,12 +110,30 @@ export default async function AdminLayout({
           >
             Offerter
           </Link>
+          <Link
+            href="/admin/inventory"
+            className="text-sm text-gray-600 hover:text-gray-900 whitespace-nowrap"
+          >
+            Lager
+          </Link>
+          <Link
+            href="/admin/calendar"
+            className="text-sm text-gray-600 hover:text-gray-900 whitespace-nowrap"
+          >
+            Kalender
+          </Link>
+          <Link
+            href="/admin/settings"
+            className="text-sm text-gray-600 hover:text-gray-900 whitespace-nowrap"
+          >
+            Inställningar
+          </Link>
           {isAdmin && (
             <Link
               href="/admin/users"
               className="text-sm text-gray-600 hover:text-gray-900 whitespace-nowrap"
             >
-              Anvandare
+              Användare
             </Link>
           )}
           <Link
