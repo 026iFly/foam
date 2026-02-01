@@ -66,6 +66,17 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
     status: string;
   }>>([]);
 
+  // Status change state
+  const [changingStatus, setChangingStatus] = useState(false);
+  const [showStatusHistory, setShowStatusHistory] = useState(false);
+  const [statusHistory, setStatusHistory] = useState<Array<{
+    from_status: string;
+    to_status: string;
+    changed_at: string;
+    changed_by: string;
+    notes?: string;
+  }>>([]);
+
   useEffect(() => {
     fetchQuote();
     fetchBookings();
@@ -150,6 +161,49 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
       alert('Fel vid skapande av bokning');
     }
     setSavingBooking(false);
+  };
+
+  const handleChangeStatus = async (newStatus: string) => {
+    if (!confirm(`Ändra status till "${STATUS_LABELS[newStatus as keyof typeof STATUS_LABELS]}"?`)) {
+      return;
+    }
+
+    setChangingStatus(true);
+    try {
+      const res = await fetch(`/api/admin/quotes/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: newStatus,
+          notes: 'Manuell ändring av admin',
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setStatusHistory(data.history || []);
+        fetchQuote(); // Reload the quote
+      } else {
+        const error = await res.json();
+        alert(`Fel: ${error.error || 'Kunde inte ändra status'}`);
+      }
+    } catch (error) {
+      console.error('Error changing status:', error);
+      alert('Fel vid statusändring');
+    }
+    setChangingStatus(false);
+  };
+
+  const fetchStatusHistory = async () => {
+    try {
+      const res = await fetch(`/api/admin/quotes/${id}/status`);
+      if (res.ok) {
+        const data = await res.json();
+        setStatusHistory(data.history || []);
+      }
+    } catch (error) {
+      console.error('Error fetching status history:', error);
+    }
   };
 
   const updateRecommendation = (index: number, field: keyof BuildingPartRecommendation, value: number) => {
@@ -491,9 +545,33 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
             )}
           </div>
           <div className="flex items-center gap-4">
-            <span className={`inline-flex px-3 py-1.5 text-sm font-semibold rounded-full border ${STATUS_COLORS[quote.status]}`}>
-              {STATUS_LABELS[quote.status]}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className={`inline-flex px-3 py-1.5 text-sm font-semibold rounded-full border ${STATUS_COLORS[quote.status]}`}>
+                {STATUS_LABELS[quote.status]}
+              </span>
+              <select
+                value={quote.status}
+                onChange={(e) => handleChangeStatus(e.target.value)}
+                disabled={changingStatus}
+                className="px-2 py-1 text-sm border border-gray-300 rounded-lg text-gray-700 bg-white cursor-pointer hover:border-gray-400 disabled:bg-gray-100"
+              >
+                <option value="pending">Ny förfrågan</option>
+                <option value="reviewed">Under granskning</option>
+                <option value="sent">Offert skickad</option>
+                <option value="accepted">Accepterad</option>
+                <option value="rejected">Avvisad</option>
+                <option value="expired">Utgången</option>
+              </select>
+              <button
+                onClick={() => {
+                  fetchStatusHistory();
+                  setShowStatusHistory(!showStatusHistory);
+                }}
+                className="text-sm text-gray-500 hover:text-gray-700 underline"
+              >
+                Historik
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1420,6 +1498,79 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                 }`}
               >
                 {savingBooking ? 'Skapar...' : 'Skapa bokning'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status History Modal */}
+      {showStatusHistory && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white">
+              <h2 className="text-xl font-semibold text-gray-800">Statushistorik</h2>
+              <button
+                onClick={() => setShowStatusHistory(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-4">
+              {statusHistory.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">Ingen statushistorik finns.</p>
+              ) : (
+                <div className="space-y-3">
+                  {statusHistory.slice().reverse().map((entry, index) => (
+                    <div key={index} className="border-l-4 border-blue-500 pl-4 py-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className={`px-2 py-0.5 rounded text-xs ${STATUS_COLORS[entry.from_status as keyof typeof STATUS_COLORS] || 'bg-gray-100'}`}>
+                          {STATUS_LABELS[entry.from_status as keyof typeof STATUS_LABELS] || entry.from_status}
+                        </span>
+                        <span className="text-gray-400">→</span>
+                        <span className={`px-2 py-0.5 rounded text-xs ${STATUS_COLORS[entry.to_status as keyof typeof STATUS_COLORS] || 'bg-gray-100'}`}>
+                          {STATUS_LABELS[entry.to_status as keyof typeof STATUS_LABELS] || entry.to_status}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {new Date(entry.changed_at).toLocaleString('sv-SE')}
+                        {entry.changed_by && ` av ${entry.changed_by}`}
+                      </div>
+                      {entry.notes && (
+                        <div className="text-xs text-gray-600 mt-1 italic">{entry.notes}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Current status info */}
+              {quote?.signed_name && (
+                <div className="mt-4 pt-4 border-t">
+                  <h3 className="font-medium text-gray-800 mb-2">Signaturinformation</h3>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p><strong>Signerad av:</strong> {quote.signed_name}</p>
+                    {quote.signed_at && (
+                      <p><strong>Signerad:</strong> {new Date(quote.signed_at).toLocaleString('sv-SE')}</p>
+                    )}
+                    {quote.signed_ip && (
+                      <p><strong>IP-adress:</strong> {quote.signed_ip}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end p-4 border-t bg-gray-50">
+              <button
+                onClick={() => setShowStatusHistory(false)}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+              >
+                Stäng
               </button>
             </div>
           </div>

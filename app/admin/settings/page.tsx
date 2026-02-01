@@ -442,18 +442,18 @@ export default function SettingsPage() {
                   {/* Personnel & Equipment */}
                   <div>
                     <h3 className="text-lg font-semibold mb-4 text-gray-800">Personal & Utrustning</h3>
-                    <div className="grid md:grid-cols-2 gap-4">
+                    <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
                       {costVariables.filter(v =>
                         v.category === 'personnel' ||
                         v.category === 'equipment' ||
                         v.category === 'labor'
                       ).map((variable) => (
                         <div key={variable.id} className="flex items-center justify-between border-b pb-3">
-                          <div>
-                            <div className="font-medium text-gray-800">{variable.description}</div>
+                          <div className="flex-1 min-w-0 mr-4">
+                            <div className="font-medium text-gray-800 truncate">{variable.description}</div>
                             <div className="text-xs text-gray-500">{variable.variable_key}</div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-shrink-0">
                             <input
                               type="number"
                               step="50"
@@ -464,9 +464,9 @@ export default function SettingsPage() {
                                   updateCostVariable(variable.id, newValue);
                                 }
                               }}
-                              className="w-28 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 text-gray-900"
+                              className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 text-gray-900"
                             />
-                            <span className="text-gray-600 text-sm">{variable.variable_unit}</span>
+                            <span className="text-gray-600 text-sm w-16">{variable.variable_unit}</span>
                           </div>
                         </div>
                       ))}
@@ -476,14 +476,14 @@ export default function SettingsPage() {
                   {/* Travel */}
                   <div>
                     <h3 className="text-lg font-semibold mb-4 text-purple-700">Transport & Resa</h3>
-                    <div className="grid md:grid-cols-2 gap-4">
+                    <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
                       {costVariables.filter(v => v.category === 'travel').map((variable) => (
                         <div key={variable.id} className="flex items-center justify-between border-b pb-3">
-                          <div>
-                            <div className="font-medium text-gray-800">{variable.description}</div>
+                          <div className="flex-1 min-w-0 mr-4">
+                            <div className="font-medium text-gray-800 truncate">{variable.description}</div>
                             <div className="text-xs text-gray-500">{variable.variable_key}</div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-shrink-0">
                             <input
                               type="number"
                               step="1"
@@ -494,9 +494,9 @@ export default function SettingsPage() {
                                   updateCostVariable(variable.id, newValue);
                                 }
                               }}
-                              className="w-28 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-gray-900"
+                              className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-gray-900"
                             />
-                            <span className="text-gray-600 text-sm">{variable.variable_unit}</span>
+                            <span className="text-gray-600 text-sm w-16">{variable.variable_unit}</span>
                           </div>
                         </div>
                       ))}
@@ -586,11 +586,11 @@ export default function SettingsPage() {
                     <div className="space-y-6">
                       {/* Thermal Properties */}
                       <div>
-                        <h3 className="text-lg font-semibold mb-3 text-indigo-700">Termiska egenskaper</h3>
+                        <h3 className="text-lg font-semibold mb-3 text-indigo-700">Termiska egenskaper (Lambda)</h3>
                         <div className="grid md:grid-cols-2 gap-4">
                           {costVariables.filter(v =>
                             v.category === 'building_physics' &&
-                            (v.variable_key.includes('lambda') || v.variable_key.includes('density'))
+                            v.variable_key.includes('lambda')
                           ).map((variable) => (
                             <div key={variable.id} className="flex items-center justify-between border-b pb-3">
                               <div>

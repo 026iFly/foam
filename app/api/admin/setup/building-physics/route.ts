@@ -71,20 +71,7 @@ const BUILDING_PHYSICS_VARIABLES = [
     description: 'Ångdiffusionsmotstånd öppencellsskum',
     category: 'building_physics',
   },
-  {
-    variable_key: 'closed_cell_density',
-    variable_value: 35,
-    variable_unit: 'kg/m³',
-    description: 'Densitet slutencellsskum',
-    category: 'building_physics',
-  },
-  {
-    variable_key: 'open_cell_density',
-    variable_value: 10,
-    variable_unit: 'kg/m³',
-    description: 'Densitet öppencellsskum',
-    category: 'building_physics',
-  },
+  // Note: density and material_cost are in pricing category (closed_density, open_density, etc.)
 ];
 
 export async function POST() {
