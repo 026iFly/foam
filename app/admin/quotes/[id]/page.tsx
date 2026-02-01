@@ -249,26 +249,33 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
     window.open(`/api/admin/quotes/${id}/pdf`, '_blank');
   };
 
-  const handleSendEmail = async () => {
-    if (!confirm('Är du säker på att du vill skicka offerten via e-post till kunden?')) {
+  const [sendingOffer, setSendingOffer] = useState(false);
+
+  const handleSendOffer = async () => {
+    if (!confirm('Är du säker på att du vill skicka offerten via e-post till kunden? PDF-filen kommer att bifogas.')) {
       return;
     }
 
+    setSendingOffer(true);
     try {
-      const response = await fetch(`/api/admin/quotes/${id}/send`, {
+      const response = await fetch(`/api/admin/quotes/${id}/send-offer`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ include_pdf: true }),
       });
       if (response.ok) {
-        alert('E-post skickad!');
+        const data = await response.json();
+        alert(`Offert skickad till ${quote?.customer_email}!`);
         await fetchQuote();
       } else {
         const error = await response.json();
         alert(`Fel: ${error.error || 'Kunde inte skicka e-post'}`);
       }
     } catch (error) {
-      console.error('Error sending email:', error);
-      alert('Ett fel uppstod vid skickande av e-post');
+      console.error('Error sending offer:', error);
+      alert('Ett fel uppstod vid skickande av offert');
     }
+    setSendingOffer(false);
   };
 
   const handleDelete = async () => {
@@ -802,10 +809,26 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
 
                     {quote.status !== 'sent' && quote.status !== 'accepted' && quote.status !== 'rejected' && (
                       <button
-                        onClick={handleSendEmail}
-                        className="w-full bg-green-600 text-white py-2.5 rounded-lg font-semibold hover:bg-green-700 transition"
+                        onClick={handleSendOffer}
+                        disabled={sendingOffer}
+                        className="w-full bg-green-600 text-white py-2.5 rounded-lg font-semibold hover:bg-green-700 transition disabled:bg-gray-400 flex items-center justify-center gap-2"
                       >
-                        Skicka via e-post
+                        {sendingOffer ? (
+                          <>
+                            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            Skickar offert...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            Skicka offert via e-post
+                          </>
+                        )}
                       </button>
                     )}
                   </>
@@ -896,6 +919,86 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
               )}
             </div>
+
+            {/* Offer Status */}
+            {quote.offer_token && (
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-semibold mb-4 text-gray-900">Offertstatus</h2>
+                <div className="space-y-4">
+                  {/* Status indicator */}
+                  <div className={`p-3 rounded-lg ${
+                    quote.status === 'accepted'
+                      ? 'bg-green-50 border border-green-200'
+                      : quote.status === 'rejected'
+                      ? 'bg-red-50 border border-red-200'
+                      : 'bg-blue-50 border border-blue-200'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      {quote.status === 'accepted' && (
+                        <>
+                          <span className="text-green-600 text-xl">✓</span>
+                          <span className="font-semibold text-green-800">Offert godkänd</span>
+                        </>
+                      )}
+                      {quote.status === 'rejected' && (
+                        <>
+                          <span className="text-red-600 text-xl">✕</span>
+                          <span className="font-semibold text-red-800">Offert avböjd</span>
+                        </>
+                      )}
+                      {quote.status === 'sent' && (
+                        <>
+                          <span className="text-blue-600 text-xl">📧</span>
+                          <span className="font-semibold text-blue-800">Väntar på svar</span>
+                        </>
+                      )}
+                    </div>
+                    {quote.signed_name && (
+                      <p className="text-sm text-gray-600 mt-2">
+                        Signerad av: <span className="font-medium">{quote.signed_name}</span>
+                      </p>
+                    )}
+                    {quote.accepted_at && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Godkänd: {formatDate(quote.accepted_at)}
+                      </p>
+                    )}
+                    {quote.rejected_at && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Avböjd: {formatDate(quote.rejected_at)}
+                      </p>
+                    )}
+                    {quote.signed_ip && (
+                      <p className="text-xs text-gray-500">
+                        IP-adress: {quote.signed_ip}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Offer link */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <p className="text-sm text-gray-500 mb-2">Offertlänk för kund:</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={`${typeof window !== 'undefined' ? window.location.origin : ''}/offert/${quote.offer_token}`}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded bg-gray-50 text-gray-900 text-sm"
+                      />
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/offert/${quote.offer_token}`);
+                          alert('Länk kopierad!');
+                        }}
+                        className="px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm"
+                      >
+                        Kopiera
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Timestamps */}
             <div className="bg-white rounded-lg shadow-md p-6">

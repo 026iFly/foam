@@ -45,6 +45,13 @@ export interface QuoteRequest {
   rot_customer_info: string | null;
   rot_info_token: string | null;
 
+  // Offer signing
+  offer_token: string | null;
+  accepted_at: string | null;
+  rejected_at: string | null;
+  signed_name: string | null;
+  signed_ip: string | null;
+
   // Timestamps
   created_at: string;
   updated_at: string;

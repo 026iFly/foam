@@ -99,6 +99,36 @@ export async function notifyNewQuoteRequest(quote: {
 }
 
 /**
+ * Notify about a sent offer
+ */
+export async function notifyOfferSent(quote: {
+  id: number;
+  quote_number?: string;
+  customer_name: string;
+  customer_email: string;
+  total_incl_vat?: number;
+}): Promise<boolean> {
+  const value = quote.total_incl_vat
+    ? new Intl.NumberFormat('sv-SE', { style: 'currency', currency: 'SEK', maximumFractionDigits: 0 }).format(quote.total_incl_vat)
+    : 'Ej beräknat';
+
+  return sendDiscordNotification({
+    embeds: [{
+      title: '📧 Offert skickad',
+      description: `Offert har skickats till ${quote.customer_name}`,
+      color: COLORS.info,
+      fields: [
+        { name: 'Offertnummer', value: quote.quote_number || `#${quote.id}`, inline: true },
+        { name: 'E-post', value: quote.customer_email, inline: true },
+        { name: 'Värde', value: value, inline: true },
+      ],
+      footer: { text: 'Väntar på kundens svar' },
+      timestamp: new Date().toISOString(),
+    }],
+  });
+}
+
+/**
  * Notify about an accepted offer
  */
 export async function notifyOfferAccepted(quote: {
