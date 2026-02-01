@@ -52,6 +52,19 @@ interface StockLevel {
   reserved_30_days: number;
   incoming_7_days: number;
   incoming_30_days: number;
+  projected_from_quotes: number;
+  projected_stock_7_days: number;
+  projected_stock_30_days: number;
+}
+
+interface MaterialProjections {
+  closedCellKg: number;
+  openCellKg: number;
+  conversionRates: {
+    signed: number;
+    sent: number;
+    pending: number;
+  };
 }
 
 interface TodoItem {
@@ -69,6 +82,7 @@ export default function AdminDashboard() {
   const [recentQuotes, setRecentQuotes] = useState<Quote[]>([]);
   const [upcomingBookings, setUpcomingBookings] = useState<Booking[]>([]);
   const [stockLevels, setStockLevels] = useState<StockLevel[]>([]);
+  const [materialProjections, setMaterialProjections] = useState<MaterialProjections | null>(null);
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -179,6 +193,9 @@ export default function AdminDashboard() {
         if (materialsRes.ok) {
           const materialsData = await materialsRes.json();
           setStockLevels(materialsData.materials || []);
+          if (materialsData.projections) {
+            setMaterialProjections(materialsData.projections);
+          }
         }
       } catch {
         // Materials API not ready yet
@@ -420,11 +437,16 @@ export default function AdminDashboard() {
                               {stock.current_stock} {stock.unit}
                             </span>
                           </div>
+                          {stock.projected_from_quotes > 0 && (
+                            <div className="text-xs text-blue-600">
+                              Prognos från offerter: ~{stock.projected_from_quotes} {stock.unit}
+                            </div>
+                          )}
                           <div className="text-xs text-gray-500">
-                            Om 7d: {stock.current_stock - stock.reserved_7_days + stock.incoming_7_days} {stock.unit}
+                            Om 7d (bokade): {stock.current_stock - stock.reserved_7_days + stock.incoming_7_days} {stock.unit}
                           </div>
-                          <div className="text-xs text-gray-500">
-                            Om 30d: {stock.current_stock - stock.reserved_30_days + stock.incoming_30_days} {stock.unit}
+                          <div className={`text-xs ${stock.projected_stock_30_days < stock.minimum_stock ? 'text-orange-600 font-medium' : 'text-gray-500'}`}>
+                            Om 30d (inkl. prognos): {stock.projected_stock_30_days} {stock.unit}
                           </div>
                           {stock.is_low && (
                             <div className="text-xs text-red-600 font-medium">
@@ -436,6 +458,11 @@ export default function AdminDashboard() {
                     </div>
                   )}
                 </div>
+                {materialProjections && (materialProjections.closedCellKg > 0 || materialProjections.openCellKg > 0) && (
+                  <div className="px-4 pb-3 text-xs text-gray-400">
+                    Baserat på {Math.round(materialProjections.conversionRates.signed * 100)}% signerade, {Math.round(materialProjections.conversionRates.sent * 100)}% skickade, {Math.round(materialProjections.conversionRates.pending * 100)}% nya
+                  </div>
+                )}
                 <div className="p-3 border-t border-gray-200 bg-gray-50">
                   <Link
                     href="/admin/inventory"
