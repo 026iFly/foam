@@ -51,6 +51,7 @@ export default function InventoryPage() {
 
   // Delivery modal state
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
+  const [editingShipment, setEditingShipment] = useState<Shipment | null>(null);
   const [deliveryForm, setDeliveryForm] = useState({
     supplier: '',
     order_number: '',
@@ -60,6 +61,7 @@ export default function InventoryPage() {
   const [deliveryItems, setDeliveryItems] = useState<DeliveryItem[]>([]);
   const [savingDelivery, setSavingDelivery] = useState(false);
   const [receivingShipment, setReceivingShipment] = useState<number | null>(null);
+  const [deletingShipment, setDeletingShipment] = useState<number | null>(null);
 
   useEffect(() => {
     loadData();
@@ -124,14 +126,33 @@ export default function InventoryPage() {
     }
   };
 
-  const openDeliveryModal = () => {
-    setDeliveryForm({
-      supplier: '',
-      order_number: '',
-      expected_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      notes: '',
-    });
-    setDeliveryItems([{ material_id: 0, quantity: 0 }]);
+  const openDeliveryModal = (shipment?: Shipment) => {
+    if (shipment) {
+      // Edit mode
+      setEditingShipment(shipment);
+      setDeliveryForm({
+        supplier: shipment.supplier || '',
+        order_number: shipment.order_number || '',
+        expected_date: shipment.expected_date,
+        notes: '',
+      });
+      setDeliveryItems(
+        shipment.shipment_items?.map(item => ({
+          material_id: item.material_id,
+          quantity: item.quantity,
+        })) || [{ material_id: 0, quantity: 0 }]
+      );
+    } else {
+      // Create mode
+      setEditingShipment(null);
+      setDeliveryForm({
+        supplier: '',
+        order_number: '',
+        expected_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        notes: '',
+      });
+      setDeliveryItems([{ material_id: 0, quantity: 0 }]);
+    }
     setShowDeliveryModal(true);
   };
 
@@ -149,7 +170,7 @@ export default function InventoryPage() {
     setDeliveryItems(updated);
   };
 
-  const handleCreateDelivery = async () => {
+  const handleSaveDelivery = async () => {
     if (!deliveryForm.expected_date) {
       showMessage('Välj ett förväntat leveransdatum');
       return;
@@ -163,8 +184,13 @@ export default function InventoryPage() {
 
     setSavingDelivery(true);
     try {
-      const res = await fetch('/api/admin/shipments', {
-        method: 'POST',
+      const url = editingShipment
+        ? `/api/admin/shipments/${editingShipment.id}`
+        : '/api/admin/shipments';
+      const method = editingShipment ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           supplier: deliveryForm.supplier,
@@ -176,17 +202,42 @@ export default function InventoryPage() {
       });
 
       if (res.ok) {
-        showMessage('Leverans skapad!');
+        showMessage(editingShipment ? 'Leverans uppdaterad!' : 'Leverans skapad!');
         setShowDeliveryModal(false);
+        setEditingShipment(null);
         loadData();
       } else {
         const error = await res.json();
-        showMessage(`Fel: ${error.error || 'Kunde inte skapa leverans'}`);
+        showMessage(`Fel: ${error.error || 'Kunde inte spara leverans'}`);
       }
     } catch {
-      showMessage('Fel vid skapande av leverans');
+      showMessage('Fel vid sparande av leverans');
     }
     setSavingDelivery(false);
+  };
+
+  const handleDeleteShipment = async (shipmentId: number) => {
+    if (!confirm('Är du säker på att du vill ta bort denna leverans?')) {
+      return;
+    }
+
+    setDeletingShipment(shipmentId);
+    try {
+      const res = await fetch(`/api/admin/shipments/${shipmentId}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        showMessage('Leverans borttagen!');
+        loadData();
+      } else {
+        const error = await res.json();
+        showMessage(`Fel: ${error.error || 'Kunde inte ta bort leverans'}`);
+      }
+    } catch {
+      showMessage('Fel vid borttagning av leverans');
+    }
+    setDeletingShipment(null);
   };
 
   const handleReceiveShipment = async (shipmentId: number) => {
@@ -381,7 +432,7 @@ export default function InventoryPage() {
             <div className="p-4 border-b border-gray-200 flex justify-between items-center">
               <h2 className="text-lg font-semibold text-gray-800">Väntande leveranser</h2>
               <button
-                onClick={openDeliveryModal}
+                onClick={() => openDeliveryModal()}
                 className="text-sm bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700 font-medium"
               >
                 + Ny leverans
@@ -422,13 +473,28 @@ export default function InventoryPage() {
                           </div>
                           <div className="text-sm text-gray-500 capitalize mb-2">{shipment.status}</div>
                           {shipment.status !== 'received' && (
-                            <button
-                              onClick={() => handleReceiveShipment(shipment.id)}
-                              disabled={receivingShipment === shipment.id}
-                              className="text-sm bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 disabled:bg-gray-400"
-                            >
-                              {receivingShipment === shipment.id ? 'Tar emot...' : 'Markera mottagen'}
-                            </button>
+                            <div className="flex gap-2 justify-end">
+                              <button
+                                onClick={() => openDeliveryModal(shipment)}
+                                className="text-sm bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200"
+                              >
+                                Redigera
+                              </button>
+                              <button
+                                onClick={() => handleReceiveShipment(shipment.id)}
+                                disabled={receivingShipment === shipment.id}
+                                className="text-sm bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 disabled:bg-gray-400"
+                              >
+                                {receivingShipment === shipment.id ? 'Tar emot...' : 'Mottagen'}
+                              </button>
+                              <button
+                                onClick={() => handleDeleteShipment(shipment.id)}
+                                disabled={deletingShipment === shipment.id}
+                                className="text-sm bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200 disabled:bg-gray-400"
+                              >
+                                {deletingShipment === shipment.id ? '...' : 'Ta bort'}
+                              </button>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -446,9 +512,14 @@ export default function InventoryPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white">
-              <h2 className="text-xl font-semibold text-gray-800">Ny leverans</h2>
+              <h2 className="text-xl font-semibold text-gray-800">
+                {editingShipment ? 'Redigera leverans' : 'Ny leverans'}
+              </h2>
               <button
-                onClick={() => setShowDeliveryModal(false)}
+                onClick={() => {
+                  setShowDeliveryModal(false);
+                  setEditingShipment(null);
+                }}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -562,17 +633,20 @@ export default function InventoryPage() {
 
             <div className="flex justify-end gap-2 p-4 border-t bg-gray-50">
               <button
-                onClick={() => setShowDeliveryModal(false)}
+                onClick={() => {
+                  setShowDeliveryModal(false);
+                  setEditingShipment(null);
+                }}
                 className="px-4 py-2 text-gray-700 hover:text-gray-900"
               >
                 Avbryt
               </button>
               <button
-                onClick={handleCreateDelivery}
+                onClick={handleSaveDelivery}
                 disabled={savingDelivery}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400"
               >
-                {savingDelivery ? 'Skapar...' : 'Skapa leverans'}
+                {savingDelivery ? 'Sparar...' : (editingShipment ? 'Spara ändringar' : 'Skapa leverans')}
               </button>
             </div>
           </div>
