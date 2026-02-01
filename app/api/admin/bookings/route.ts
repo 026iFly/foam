@@ -79,7 +79,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data, error } = await supabaseAdmin
+    // Create the booking
+    const { data: booking, error } = await supabaseAdmin
       .from('bookings')
       .insert({
         quote_id: quote_id || null,
@@ -97,7 +98,76 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ booking: data });
+    // For installation bookings with a quote, add material requirements
+    if (booking_type === 'installation' && quote_id) {
+      try {
+        // Fetch quote calculation data
+        const { data: quote } = await supabaseAdmin
+          .from('quote_requests')
+          .select('calculation_data, adjusted_data')
+          .eq('id', quote_id)
+          .single();
+
+        if (quote) {
+          const dataStr = quote.adjusted_data || quote.calculation_data;
+          if (dataStr) {
+            const calcData = typeof dataStr === 'string' ? JSON.parse(dataStr) : dataStr;
+            const totals = calcData.totals;
+
+            if (totals) {
+              // Get material IDs
+              const { data: materials } = await supabaseAdmin
+                .from('materials')
+                .select('id, name');
+
+              const openCellMaterial = materials?.find(m =>
+                m.name.toLowerCase().includes('öppen') || m.name.toLowerCase().includes('open')
+              );
+              const closedCellMaterial = materials?.find(m =>
+                m.name.toLowerCase().includes('sluten') || m.name.toLowerCase().includes('closed')
+              );
+
+              const bookingMaterials = [];
+
+              // Add open cell foam if needed
+              if (totals.totalOpenCellKg > 0 && openCellMaterial) {
+                bookingMaterials.push({
+                  booking_id: booking.id,
+                  material_id: openCellMaterial.id,
+                  estimated_quantity: Math.round(totals.totalOpenCellKg * 10) / 10,
+                });
+              }
+
+              // Add closed cell foam if needed
+              if (totals.totalClosedCellKg > 0 && closedCellMaterial) {
+                bookingMaterials.push({
+                  booking_id: booking.id,
+                  material_id: closedCellMaterial.id,
+                  estimated_quantity: Math.round(totals.totalClosedCellKg * 10) / 10,
+                });
+              }
+
+              // Insert material requirements
+              if (bookingMaterials.length > 0) {
+                const { error: matError } = await supabaseAdmin
+                  .from('booking_materials')
+                  .insert(bookingMaterials);
+
+                if (matError) {
+                  console.error('Error adding booking materials:', matError);
+                  // Don't fail the whole request, booking is already created
+                }
+              }
+            }
+          }
+        }
+      } catch (matErr) {
+        console.error('Error processing booking materials:', matErr);
+        // Don't fail the whole request
+      }
+    }
+
+    return NextResponse.json({ booking });
   } catch (err) {
     console.error('Bookings POST error:', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
