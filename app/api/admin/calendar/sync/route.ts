@@ -259,6 +259,85 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    if (action === 'pull_from_google') {
+      // Pull changes from Google Calendar and update bookings
+      const startDate = new Date();
+      startDate.setMonth(startDate.getMonth() - 1); // Include past month
+      const endDate = new Date();
+      endDate.setMonth(endDate.getMonth() + 6); // 6 months ahead
+
+      const events = await fetchCalendarEvents(startDate, endDate);
+
+      const results = {
+        updated: 0,
+        notFound: 0,
+        errors: [] as string[],
+      };
+
+      for (const event of events) {
+        const bookingId = extractBookingIdFromEvent(event);
+        if (!bookingId) continue;
+
+        try {
+          // Parse event times
+          const startStr = event.start;
+          let scheduled_date = '';
+          let scheduled_time: string | null = null;
+
+          if (startStr.length === 10) {
+            // All-day event
+            scheduled_date = startStr;
+            scheduled_time = 'heldag';
+          } else {
+            // DateTime event
+            const startDateTime = new Date(startStr);
+            scheduled_date = startStr.split('T')[0];
+            const hours = String(startDateTime.getHours()).padStart(2, '0');
+            const mins = String(startDateTime.getMinutes()).padStart(2, '0');
+
+            if (event.end) {
+              const endDateTime = new Date(event.end);
+              const endHours = String(endDateTime.getHours()).padStart(2, '0');
+              const endMins = String(endDateTime.getMinutes()).padStart(2, '0');
+              scheduled_time = `${hours}:${mins}-${endHours}:${endMins}`;
+            } else {
+              scheduled_time = `${hours}:${mins}`;
+            }
+          }
+
+          // Update booking
+          const { data, error } = await supabaseAdmin
+            .from('bookings')
+            .update({
+              scheduled_date,
+              scheduled_time,
+              google_event_id: event.id,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', bookingId)
+            .select()
+            .single();
+
+          if (error) {
+            if (error.code === 'PGRST116') {
+              results.notFound++;
+            } else {
+              results.errors.push(`Booking ${bookingId}: ${error.message}`);
+            }
+          } else if (data) {
+            results.updated++;
+          }
+        } catch (err) {
+          results.errors.push(`Booking ${bookingId}: ${(err as Error).message}`);
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        ...results,
+      });
+    }
+
     return NextResponse.json(
       { error: 'Unknown action' },
       { status: 400 }

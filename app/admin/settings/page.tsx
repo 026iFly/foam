@@ -367,6 +367,27 @@ export default function SettingsPage() {
     setCalendarLoading(false);
   };
 
+  const pullFromGoogle = async () => {
+    setCalendarLoading(true);
+    try {
+      const res = await fetch('/api/admin/calendar/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'pull_from_google' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showMessage(`Hämtning klar! ${data.updated} bokningar uppdaterade.`);
+        loadCalendarStatus();
+      } else {
+        showMessage(data.error || 'Hämtning misslyckades');
+      }
+    } catch {
+      showMessage('Fel vid hämtning från Google');
+    }
+    setCalendarLoading(false);
+  };
+
   const tabs: { id: TabType; label: string }[] = [
     { id: 'pricing', label: 'Prissättning & Kostnader' },
     { id: 'multipliers', label: 'Projektmultiplikatorer' },
@@ -1064,6 +1085,13 @@ export default function SettingsPage() {
                               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400"
                             >
                               Synka alla bokningar
+                            </button>
+                            <button
+                              onClick={pullFromGoogle}
+                              disabled={calendarLoading || !calendarStatus.connected}
+                              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400"
+                            >
+                              Hämta från Google
                             </button>
                             <button
                               onClick={loadCalendarStatus}
