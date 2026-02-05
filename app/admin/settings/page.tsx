@@ -59,7 +59,17 @@ interface SystemSetting {
   description: string;
 }
 
-type TabType = 'pricing' | 'multipliers' | 'physics' | 'templates' | 'terms' | 'forecast';
+type TabType = 'pricing' | 'multipliers' | 'physics' | 'templates' | 'terms' | 'forecast' | 'calendar';
+
+interface CalendarSyncStatus {
+  configured: boolean;
+  connected: boolean;
+  calendarName?: string;
+  error?: string;
+  syncedCount?: number;
+  unsyncedBookings?: { id: number; booking_type: string; scheduled_date: string; status: string }[];
+  lastSync?: { lastSync: string; syncedCount: number; failedCount: number } | null;
+}
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<TabType>('pricing');
@@ -79,6 +89,10 @@ export default function SettingsPage() {
 
   // Editing template
   const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
+
+  // Calendar sync
+  const [calendarStatus, setCalendarStatus] = useState<CalendarSyncStatus | null>(null);
+  const [calendarLoading, setCalendarLoading] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -294,6 +308,65 @@ export default function SettingsPage() {
     setSaving(false);
   };
 
+  const loadCalendarStatus = async () => {
+    setCalendarLoading(true);
+    try {
+      const res = await fetch('/api/admin/calendar/sync');
+      const data = await res.json();
+      setCalendarStatus(data);
+    } catch (err) {
+      console.error('Failed to load calendar status:', err);
+      setCalendarStatus({
+        configured: false,
+        connected: false,
+        error: 'Kunde inte hämta kalenderstatus',
+      });
+    }
+    setCalendarLoading(false);
+  };
+
+  const testCalendarConnection = async () => {
+    setCalendarLoading(true);
+    try {
+      const res = await fetch('/api/admin/calendar/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'test' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showMessage(`Anslutning OK! Kalender: ${data.calendarName}`);
+        loadCalendarStatus();
+      } else {
+        showMessage(data.error || 'Anslutningstest misslyckades');
+      }
+    } catch {
+      showMessage('Fel vid anslutningstest');
+    }
+    setCalendarLoading(false);
+  };
+
+  const syncAllBookings = async () => {
+    setCalendarLoading(true);
+    try {
+      const res = await fetch('/api/admin/calendar/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'sync_all' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showMessage(`Synkronisering klar! ${data.synced} bokningar synkade.`);
+        loadCalendarStatus();
+      } else {
+        showMessage(data.error || 'Synkronisering misslyckades');
+      }
+    } catch {
+      showMessage('Fel vid synkronisering');
+    }
+    setCalendarLoading(false);
+  };
+
   const tabs: { id: TabType; label: string }[] = [
     { id: 'pricing', label: 'Prissättning & Kostnader' },
     { id: 'multipliers', label: 'Projektmultiplikatorer' },
@@ -301,6 +374,7 @@ export default function SettingsPage() {
     { id: 'templates', label: 'Meddelanden' },
     { id: 'terms', label: 'Villkor' },
     { id: 'forecast', label: 'Prognos' },
+    { id: 'calendar', label: 'Google Kalender' },
   ];
 
   if (loading) {
@@ -908,6 +982,170 @@ export default function SettingsPage() {
                       <p className="text-gray-500 italic">Inga villkor tillagda ännu.</p>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* Google Calendar Tab */}
+              {activeTab === 'calendar' && (
+                <div>
+                  <h2 className="text-xl font-semibold mb-4 text-gray-900">Google Kalender</h2>
+                  <p className="text-gray-600 mb-6">
+                    Synkronisera bokningar med Google Kalender för att se dem i din kalendar-app.
+                  </p>
+
+                  {!calendarStatus && !calendarLoading && (
+                    <button
+                      onClick={loadCalendarStatus}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      Kontrollera status
+                    </button>
+                  )}
+
+                  {calendarLoading && (
+                    <div className="text-gray-600">Laddar...</div>
+                  )}
+
+                  {calendarStatus && !calendarLoading && (
+                    <div className="space-y-6">
+                      {/* Connection Status */}
+                      <div className="p-4 border rounded-lg">
+                        <h3 className="font-medium mb-3 text-gray-800">Anslutningsstatus</h3>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-3 h-3 rounded-full ${
+                              calendarStatus.connected ? 'bg-green-500' :
+                              calendarStatus.configured ? 'bg-yellow-500' : 'bg-red-500'
+                            }`} />
+                            <span className="text-gray-700">
+                              {calendarStatus.connected
+                                ? `Ansluten till: ${calendarStatus.calendarName}`
+                                : calendarStatus.configured
+                                ? 'Konfigurerad men ej ansluten'
+                                : 'Ej konfigurerad'}
+                            </span>
+                          </div>
+
+                          {calendarStatus.error && (
+                            <div className="p-3 bg-red-50 text-red-700 rounded text-sm">
+                              {calendarStatus.error}
+                            </div>
+                          )}
+
+                          {!calendarStatus.configured && (
+                            <div className="p-3 bg-yellow-50 text-yellow-800 rounded text-sm">
+                              <strong>Konfiguration krävs:</strong><br />
+                              Lägg till följande miljövariabler i Vercel:<br />
+                              <code className="block mt-2 p-2 bg-yellow-100 rounded font-mono text-xs">
+                                GOOGLE_CLIENT_EMAIL<br />
+                                GOOGLE_PRIVATE_KEY<br />
+                                GOOGLE_CALENDAR_ID
+                              </code>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      {calendarStatus.configured && (
+                        <div className="p-4 border rounded-lg">
+                          <h3 className="font-medium mb-3 text-gray-800">Åtgärder</h3>
+                          <div className="flex flex-wrap gap-3">
+                            <button
+                              onClick={testCalendarConnection}
+                              disabled={calendarLoading}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                            >
+                              Testa anslutning
+                            </button>
+                            <button
+                              onClick={syncAllBookings}
+                              disabled={calendarLoading || !calendarStatus.connected}
+                              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400"
+                            >
+                              Synka alla bokningar
+                            </button>
+                            <button
+                              onClick={loadCalendarStatus}
+                              disabled={calendarLoading}
+                              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:bg-gray-100"
+                            >
+                              Uppdatera status
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Sync Statistics */}
+                      {calendarStatus.connected && (
+                        <div className="p-4 border rounded-lg">
+                          <h3 className="font-medium mb-3 text-gray-800">Synkroniseringsstatus</h3>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <div className="p-3 bg-green-50 rounded">
+                              <div className="text-2xl font-bold text-green-700">
+                                {calendarStatus.syncedCount || 0}
+                              </div>
+                              <div className="text-sm text-green-600">Synkade bokningar</div>
+                            </div>
+                            <div className="p-3 bg-yellow-50 rounded">
+                              <div className="text-2xl font-bold text-yellow-700">
+                                {calendarStatus.unsyncedBookings?.length || 0}
+                              </div>
+                              <div className="text-sm text-yellow-600">Ej synkade</div>
+                            </div>
+                            {calendarStatus.lastSync && (
+                              <div className="p-3 bg-blue-50 rounded">
+                                <div className="text-sm font-medium text-blue-700">
+                                  Senaste synk
+                                </div>
+                                <div className="text-sm text-blue-600">
+                                  {new Date(calendarStatus.lastSync.lastSync).toLocaleString('sv-SE')}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Unsynced Bookings */}
+                      {calendarStatus.unsyncedBookings && calendarStatus.unsyncedBookings.length > 0 && (
+                        <div className="p-4 border rounded-lg">
+                          <h3 className="font-medium mb-3 text-gray-800">Bokningar utan kalenderhändelse</h3>
+                          <div className="space-y-2 max-h-60 overflow-y-auto">
+                            {calendarStatus.unsyncedBookings.map((booking) => (
+                              <div key={booking.id} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
+                                <span className="text-gray-700">
+                                  #{booking.id} - {booking.booking_type === 'installation' ? 'Installation' : 'Hembesök'}
+                                </span>
+                                <span className="text-gray-500">{booking.scheduled_date}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <p className="text-sm text-gray-500 mt-2">
+                            Klicka på &quot;Synka alla bokningar&quot; för att lägga till dessa i Google Kalender.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Setup Instructions */}
+                      <div className="p-4 bg-gray-50 rounded-lg">
+                        <h3 className="font-medium mb-2 text-gray-800">Installationsguide</h3>
+                        <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
+                          <li>Gå till <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Google Cloud Console</a></li>
+                          <li>Skapa ett projekt och aktivera Google Calendar API</li>
+                          <li>Skapa ett Service Account och ladda ner JSON-nyckeln</li>
+                          <li>Dela din Google-kalender med service account-e-posten</li>
+                          <li>Lägg till miljövariablerna i Vercel:
+                            <ul className="list-disc list-inside ml-4 mt-1 text-gray-600">
+                              <li><code>GOOGLE_CLIENT_EMAIL</code> - Service account e-post</li>
+                              <li><code>GOOGLE_PRIVATE_KEY</code> - Privat nyckel från JSON</li>
+                              <li><code>GOOGLE_CALENDAR_ID</code> - Kalender-ID (vanligen en e-postadress)</li>
+                            </ul>
+                          </li>
+                        </ol>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

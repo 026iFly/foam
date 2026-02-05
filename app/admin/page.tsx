@@ -70,13 +70,21 @@ interface MaterialProjections {
 }
 
 interface TodoItem {
-  id: string;
-  type: 'review' | 'send_offer' | 'send_rot' | 'follow_up' | 'book_installation' | 'low_stock' | 'shipment_arriving';
+  id: number;
   title: string;
-  description: string;
-  quote_id?: number;
-  priority: 'high' | 'medium' | 'low';
+  description: string | null;
+  status: string;
+  priority: string;
+  quote_id: number | null;
+  booking_id: number | null;
+  task_type: string;
+  due_date: string | null;
   created_at: string;
+  quote_requests?: {
+    id: number;
+    customer_name: string;
+    quote_number: string | null;
+  } | null;
 }
 
 export default function AdminDashboard() {
@@ -87,10 +95,46 @@ export default function AdminDashboard() {
   const [materialProjections, setMaterialProjections] = useState<MaterialProjections | null>(null);
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  const syncTasks = async () => {
+    setSyncing(true);
+    try {
+      await fetch('/api/admin/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'sync' }),
+      });
+      // Reload tasks
+      const tasksRes = await fetch('/api/admin/tasks');
+      if (tasksRes.ok) {
+        const tasksData = await tasksRes.json();
+        setTodos(tasksData.tasks || []);
+      }
+    } catch (err) {
+      console.error('Failed to sync tasks:', err);
+    }
+    setSyncing(false);
+  };
+
+  const completeTask = async (taskId: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await fetch(`/api/admin/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'completed' }),
+      });
+      setTodos(todos.filter(t => t.id !== taskId));
+    } catch (err) {
+      console.error('Failed to complete task:', err);
+    }
+  };
 
   const loadDashboardData = async () => {
     try {
@@ -101,82 +145,16 @@ export default function AdminDashboard() {
       setCounts(quotesData.counts);
       setRecentQuotes(quotesData.quotes?.slice(0, 5) || []);
 
-      // Generate todos based on quotes
-      const generatedTodos: TodoItem[] = [];
-      const quotes = quotesData.quotes || [];
-
-      for (const quote of quotes) {
-        // Review new requests
-        if (quote.status === 'pending') {
-          generatedTodos.push({
-            id: `review-${quote.id}`,
-            type: 'review',
-            title: 'Granska ny offertförfrågan',
-            description: `${quote.customer_name} - ${quote.customer_address}`,
-            quote_id: quote.id,
-            priority: 'high',
-            created_at: quote.created_at,
-          });
+      // Load tasks from database
+      try {
+        const tasksRes = await fetch('/api/admin/tasks');
+        if (tasksRes.ok) {
+          const tasksData = await tasksRes.json();
+          setTodos(tasksData.tasks?.slice(0, 10) || []);
         }
-
-        // Send offer for reviewed quotes
-        if (quote.status === 'reviewed' || quote.status === 'quoted') {
-          generatedTodos.push({
-            id: `send-${quote.id}`,
-            type: 'send_offer',
-            title: 'Skicka offert till kund',
-            description: `${quote.customer_name} - ${formatCurrency(quote.total_incl_vat || quote.total_excl_vat)}`,
-            quote_id: quote.id,
-            priority: 'medium',
-            created_at: quote.created_at,
-          });
-        }
-
-        // Send ROT link for accepted quotes without ROT info
-        if (quote.status === 'accepted' && quote.apply_rot_deduction && !quote.rot_customer_info) {
-          generatedTodos.push({
-            id: `rot-${quote.id}`,
-            type: 'send_rot',
-            title: 'Skicka länk för ROT-underlag',
-            description: `${quote.customer_name}`,
-            quote_id: quote.id,
-            priority: 'high',
-            created_at: quote.accepted_at || quote.created_at,
-          });
-        }
-
-        // Book installation for accepted quotes
-        if (quote.status === 'accepted') {
-          generatedTodos.push({
-            id: `book-${quote.id}`,
-            type: 'book_installation',
-            title: 'Boka installation',
-            description: `${quote.customer_name} - ${quote.customer_address}`,
-            quote_id: quote.id,
-            priority: 'medium',
-            created_at: quote.accepted_at || quote.created_at,
-          });
-        }
-
-        // Follow up on sent quotes older than 7 days
-        if (quote.status === 'sent' && quote.email_sent_at) {
-          const sentDate = new Date(quote.email_sent_at);
-          const daysSince = Math.floor((Date.now() - sentDate.getTime()) / (1000 * 60 * 60 * 24));
-          if (daysSince >= 7) {
-            generatedTodos.push({
-              id: `followup-${quote.id}`,
-              type: 'follow_up',
-              title: `Följ upp offert (${daysSince} dagar)`,
-              description: `${quote.customer_name} - ${quote.quote_number || 'Offert'}`,
-              quote_id: quote.id,
-              priority: 'low',
-              created_at: quote.email_sent_at,
-            });
-          }
-        }
+      } catch {
+        // Tasks API not ready yet - will sync on first use
       }
-
-      setTodos(generatedTodos.slice(0, 10));
 
       // Try to load bookings (may not exist yet)
       try {
@@ -306,24 +284,48 @@ export default function AdminDashboard() {
             <div className="lg:col-span-2 space-y-6">
               {/* To-do List */}
               <div className="bg-white rounded-lg shadow">
-                <div className="p-4 border-b border-gray-200">
+                <div className="p-4 border-b border-gray-200 flex justify-between items-center">
                   <h2 className="text-lg font-semibold text-gray-800">Att göra</h2>
+                  <button
+                    onClick={syncTasks}
+                    disabled={syncing}
+                    className="text-sm px-3 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50"
+                  >
+                    {syncing ? 'Synkar...' : 'Uppdatera'}
+                  </button>
                 </div>
                 <div className="divide-y divide-gray-100">
                   {todos.length === 0 ? (
                     <div className="p-6 text-center text-gray-500">
-                      Inga uppgifter just nu. Bra jobbat!
+                      <p>Inga uppgifter just nu.</p>
+                      <button
+                        onClick={syncTasks}
+                        className="mt-2 text-sm text-green-600 hover:text-green-700"
+                      >
+                        Skapa uppgifter från offerter
+                      </button>
                     </div>
                   ) : (
                     todos.map((todo) => (
-                      <Link
+                      <div
                         key={todo.id}
-                        href={todo.quote_id ? `/admin/quotes/${todo.quote_id}` : '/admin/quotes'}
-                        className={`block p-4 hover:bg-gray-50 border-l-4 ${getTodoPriorityColor(todo.priority)}`}
+                        className={`flex items-center gap-3 p-4 hover:bg-gray-50 border-l-4 ${getTodoPriorityColor(todo.priority)}`}
                       >
-                        <div className="font-medium text-gray-800">{todo.title}</div>
-                        <div className="text-sm text-gray-500">{todo.description}</div>
-                      </Link>
+                        <button
+                          onClick={(e) => completeTask(todo.id, e)}
+                          className="flex-shrink-0 w-5 h-5 border-2 border-gray-300 rounded hover:border-green-500 hover:bg-green-50 flex items-center justify-center"
+                          title="Markera som klar"
+                        >
+                          <span className="text-transparent hover:text-green-500 text-xs">✓</span>
+                        </button>
+                        <Link
+                          href={todo.quote_id ? `/admin/quotes/${todo.quote_id}` : '/admin/quotes'}
+                          className="flex-1 min-w-0"
+                        >
+                          <div className="font-medium text-gray-800">{todo.title}</div>
+                          <div className="text-sm text-gray-500 truncate">{todo.description}</div>
+                        </Link>
+                      </div>
                     ))
                   )}
                 </div>

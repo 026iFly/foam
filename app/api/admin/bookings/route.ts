@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import {
+  isGoogleCalendarConfigured,
+  createCalendarEvent,
+  BookingWithCustomer,
+} from '@/lib/google-calendar';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -164,6 +169,72 @@ export async function POST(request: NextRequest) {
       } catch (matErr) {
         console.error('Error processing booking materials:', matErr);
         // Don't fail the whole request
+      }
+    }
+
+    // Sync to Google Calendar if configured
+    if (isGoogleCalendarConfigured()) {
+      try {
+        // Fetch the full booking with customer info for Google Calendar
+        const { data: fullBooking } = await supabaseAdmin
+          .from('bookings')
+          .select(`
+            *,
+            quote_requests (
+              customer_name,
+              customer_address,
+              customer_phone,
+              customer_email
+            )
+          `)
+          .eq('id', booking.id)
+          .single();
+
+        // Fetch materials for the booking
+        const { data: bookingMaterialsData } = await supabaseAdmin
+          .from('booking_materials')
+          .select(`
+            estimated_quantity,
+            materials (name)
+          `)
+          .eq('booking_id', booking.id);
+
+        const bookingForCalendar: BookingWithCustomer = {
+          id: booking.id,
+          quote_id: booking.quote_id,
+          booking_type: booking.booking_type,
+          scheduled_date: booking.scheduled_date,
+          scheduled_time: booking.scheduled_time,
+          status: booking.status,
+          notes: booking.notes,
+          google_event_id: null,
+          customer_name: fullBooking?.quote_requests?.customer_name,
+          customer_address: fullBooking?.quote_requests?.customer_address,
+          customer_phone: fullBooking?.quote_requests?.customer_phone,
+          customer_email: fullBooking?.quote_requests?.customer_email,
+          materials: bookingMaterialsData?.map((bm) => {
+            const mat = bm.materials as unknown as { name: string } | null;
+            return {
+              name: mat?.name || 'Unknown',
+              estimated_quantity: bm.estimated_quantity,
+            };
+          }),
+        };
+
+        const googleEventId = await createCalendarEvent(bookingForCalendar);
+
+        if (googleEventId) {
+          // Update booking with Google event ID
+          await supabaseAdmin
+            .from('bookings')
+            .update({ google_event_id: googleEventId })
+            .eq('id', booking.id);
+
+          booking.google_event_id = googleEventId;
+        }
+      } catch (calendarErr) {
+        console.error('Error syncing to Google Calendar:', calendarErr);
+        // Don't fail the whole request, booking is already created
       }
     }
 
