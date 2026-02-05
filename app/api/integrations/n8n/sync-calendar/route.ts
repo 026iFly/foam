@@ -172,16 +172,21 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET - Health check and status
+// GET - Health check and status (no auth required for debugging)
 export async function GET(request: NextRequest) {
-  // Verify API key
-  if (!verifyApiKey(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const apiKey = request.headers.get('x-api-key') || request.headers.get('authorization')?.replace('Bearer ', '');
+  const expectedKey = process.env.N8N_API_KEY;
 
   return NextResponse.json({
     status: 'ok',
     configured: isGoogleCalendarConfigured(),
     timestamp: new Date().toISOString(),
+    auth: {
+      keyProvided: !!apiKey,
+      keyLength: apiKey?.length || 0,
+      envKeySet: !!expectedKey,
+      envKeyLength: expectedKey?.length || 0,
+      match: apiKey === expectedKey,
+    },
   });
 }
