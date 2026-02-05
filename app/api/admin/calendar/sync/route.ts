@@ -279,7 +279,7 @@ export async function POST(request: NextRequest) {
         if (!bookingId) continue;
 
         try {
-          // Parse event times
+          // Parse event times with Stockholm timezone
           const startStr = event.start;
           let scheduled_date = '';
           let scheduled_time: string | null = null;
@@ -289,19 +289,38 @@ export async function POST(request: NextRequest) {
             scheduled_date = startStr;
             scheduled_time = 'heldag';
           } else {
-            // DateTime event
+            // DateTime event - convert to Stockholm timezone
             const startDateTime = new Date(startStr);
-            scheduled_date = startStr.split('T')[0];
-            const hours = String(startDateTime.getHours()).padStart(2, '0');
-            const mins = String(startDateTime.getMinutes()).padStart(2, '0');
+
+            // Use Intl to format in Stockholm timezone
+            const stockholmFormatter = new Intl.DateTimeFormat('sv-SE', {
+              timeZone: 'Europe/Stockholm',
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false,
+            });
+
+            const startParts = stockholmFormatter.formatToParts(startDateTime);
+            const startYear = startParts.find(p => p.type === 'year')?.value;
+            const startMonth = startParts.find(p => p.type === 'month')?.value;
+            const startDay = startParts.find(p => p.type === 'day')?.value;
+            const startHour = startParts.find(p => p.type === 'hour')?.value;
+            const startMinute = startParts.find(p => p.type === 'minute')?.value;
+
+            scheduled_date = `${startYear}-${startMonth}-${startDay}`;
+            const startTimeStr = `${startHour}:${startMinute}`;
 
             if (event.end) {
               const endDateTime = new Date(event.end);
-              const endHours = String(endDateTime.getHours()).padStart(2, '0');
-              const endMins = String(endDateTime.getMinutes()).padStart(2, '0');
-              scheduled_time = `${hours}:${mins}-${endHours}:${endMins}`;
+              const endParts = stockholmFormatter.formatToParts(endDateTime);
+              const endHour = endParts.find(p => p.type === 'hour')?.value;
+              const endMinute = endParts.find(p => p.type === 'minute')?.value;
+              scheduled_time = `${startTimeStr}-${endHour}:${endMinute}`;
             } else {
-              scheduled_time = `${hours}:${mins}`;
+              scheduled_time = startTimeStr;
             }
           }
 

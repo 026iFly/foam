@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { calendar_v3 } from 'googleapis';
 import {
   initGoogleCalendar,
   getCalendarId,
@@ -18,6 +19,7 @@ const VISIT_COLORS = ['9', '1', '7']; // Blueberry, Lavender, Peacock (blues)
 
 /**
  * Parse event times and extract date/time info
+ * Handles timezone conversion to Stockholm time
  */
 function parseEventTimes(event: { start?: string | null; end?: string | null }): {
   scheduled_date: string;
@@ -33,18 +35,39 @@ function parseEventTimes(event: { start?: string | null; end?: string | null }):
     };
   }
 
-  // Parse datetime
+  // Parse datetime - Google returns ISO format with timezone offset
+  // e.g., "2026-02-05T08:00:00+01:00"
   const startDate = new Date(startStr);
   const endDate = event.end ? new Date(event.end) : null;
 
-  const date = startStr.split('T')[0];
-  const startTime = `${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}`;
+  // Convert to Stockholm timezone
+  const stockholmFormatter = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Europe/Stockholm',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
+  const startParts = stockholmFormatter.formatToParts(startDate);
+  const startYear = startParts.find(p => p.type === 'year')?.value;
+  const startMonth = startParts.find(p => p.type === 'month')?.value;
+  const startDay = startParts.find(p => p.type === 'day')?.value;
+  const startHour = startParts.find(p => p.type === 'hour')?.value;
+  const startMinute = startParts.find(p => p.type === 'minute')?.value;
+
+  const date = `${startYear}-${startMonth}-${startDay}`;
+  const startTime = `${startHour}:${startMinute}`;
 
   let scheduled_time = startTime;
 
   if (endDate) {
-    const endTime = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
-    scheduled_time = `${startTime}-${endTime}`;
+    const endParts = stockholmFormatter.formatToParts(endDate);
+    const endHour = endParts.find(p => p.type === 'hour')?.value;
+    const endMinute = endParts.find(p => p.type === 'minute')?.value;
+    scheduled_time = `${startTime}-${endHour}:${endMinute}`;
   }
 
   return {
@@ -146,15 +169,37 @@ export async function POST(request: NextRequest) {
       let syncToken = syncTokenSetting?.value as string | undefined;
 
       try {
-        // If we have a sync token, use incremental sync
-        // Otherwise, just acknowledge the webhook and let manual sync handle it
+        let events: calendar_v3.Schema$Event[] = [];
+        let nextSyncToken: string | undefined;
+
         if (syncToken) {
+          // Use incremental sync with existing token
           const response = await calendar.events.list({
             calendarId,
             syncToken,
           });
+          events = response.data.items || [];
+          nextSyncToken = response.data.nextSyncToken || undefined;
+        } else {
+          // No sync token - fetch recent events (last 24 hours) to process changes
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
 
-          const events = response.data.items || [];
+          const response = await calendar.events.list({
+            calendarId,
+            timeMin: yesterday.toISOString(),
+            updatedMin: yesterday.toISOString(),
+            singleEvents: true,
+            orderBy: 'updated',
+            maxResults: 100,
+          });
+          events = response.data.items || [];
+          nextSyncToken = response.data.nextSyncToken || undefined;
+
+          console.log(`No sync token, fetched ${events.length} recently updated events`);
+        }
+
+        if (events.length > 0) {
 
           for (const event of events) {
             const googleEventId = event.id;
@@ -233,16 +278,17 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // Store the new sync token
-          if (response.data.nextSyncToken) {
-            await supabaseAdmin
-              .from('system_settings')
-              .upsert({
-                key: 'google_calendar_sync_token',
-                value: response.data.nextSyncToken,
-                description: 'Google Calendar incremental sync token',
-              }, { onConflict: 'key' });
-          }
+        }
+
+        // Store the new sync token
+        if (nextSyncToken) {
+          await supabaseAdmin
+            .from('system_settings')
+            .upsert({
+              key: 'google_calendar_sync_token',
+              value: nextSyncToken,
+              description: 'Google Calendar incremental sync token',
+            }, { onConflict: 'key' });
         }
       } catch (err) {
         // If sync token is invalid, clear it and do a fresh sync next time
