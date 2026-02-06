@@ -32,7 +32,6 @@ export async function GET(request: NextRequest) {
     const { data: materials, error: materialsError } = await supabaseAdmin
       .from('materials')
       .select('*')
-      .eq('is_active', true)
       .order('name');
 
     if (materialsError) {
@@ -60,8 +59,8 @@ export async function GET(request: NextRequest) {
 
     // Format materials with stock status
     const formatted = materials?.map(m => {
-      const stockPercentage = m.reorder_threshold_kg
-        ? Math.round((m.current_stock_kg / m.reorder_threshold_kg) * 100)
+      const stockPercentage = m.minimum_stock
+        ? Math.round((m.current_stock / m.minimum_stock) * 100)
         : null;
 
       const incoming = pendingShipments
@@ -72,8 +71,8 @@ export async function GET(request: NextRequest) {
         id: m.id,
         name: m.name,
         unit: m.unit,
-        currentStock: m.current_stock_kg,
-        reorderThreshold: m.reorder_threshold_kg,
+        currentStock: m.current_stock,
+        reorderThreshold: m.minimum_stock,
         stockPercentage,
         stockStatus: stockPercentage !== null
           ? stockPercentage < 50 ? 'low' : stockPercentage < 100 ? 'ok' : 'good'
@@ -118,7 +117,7 @@ export async function PUT(request: NextRequest) {
     // Get current stock
     const { data: current, error: fetchError } = await supabaseAdmin
       .from('materials')
-      .select('current_stock_kg, name')
+      .select('current_stock, name')
       .eq('id', id)
       .single();
 
@@ -131,7 +130,7 @@ export async function PUT(request: NextRequest) {
     if (current_stock_kg !== undefined) {
       newStock = current_stock_kg;
     } else if (adjustment !== undefined) {
-      newStock = current.current_stock_kg + adjustment;
+      newStock = current.current_stock + adjustment;
     } else {
       return NextResponse.json({ error: 'Provide current_stock_kg or adjustment' }, { status: 400 });
     }
@@ -140,7 +139,7 @@ export async function PUT(request: NextRequest) {
     const { error: updateError } = await supabaseAdmin
       .from('materials')
       .update({
-        current_stock_kg: newStock,
+        current_stock: newStock,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id);
@@ -154,9 +153,9 @@ export async function PUT(request: NextRequest) {
       .from('stock_adjustments')
       .insert({
         material_id: id,
-        previous_stock: current.current_stock_kg,
+        previous_stock: current.current_stock,
         new_stock: newStock,
-        adjustment: newStock - current.current_stock_kg,
+        adjustment: newStock - current.current_stock,
         reason: reason || 'Updated via API',
         created_at: new Date().toISOString(),
       })
@@ -168,9 +167,9 @@ export async function PUT(request: NextRequest) {
       material: {
         id,
         name: current.name,
-        previousStock: current.current_stock_kg,
+        previousStock: current.current_stock,
         newStock,
-        adjustment: newStock - current.current_stock_kg,
+        adjustment: newStock - current.current_stock,
       },
     });
   } catch (err) {
