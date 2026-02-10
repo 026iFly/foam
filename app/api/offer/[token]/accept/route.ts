@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { notifyOfferAccepted } from '@/lib/discord';
+import { sendOrderConfirmationEmail } from '@/lib/email';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -60,6 +61,22 @@ export async function POST(
       return NextResponse.json({ error: 'Kunde inte uppdatera offert' }, { status: 500 });
     }
 
+    // Create a booking with customer token for the portal
+    const customerToken = crypto.randomUUID();
+    const { data: newBooking } = await supabaseAdmin
+      .from('bookings')
+      .insert({
+        quote_id: quote.id,
+        booking_type: 'installation',
+        scheduled_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Default: 2 weeks out
+        status: 'scheduled',
+        num_installers: quote.num_installers || 2,
+        customer_token: customerToken,
+        notes: 'Automatiskt skapad efter offertacceptans. Datum behöver bekräftas.',
+      })
+      .select()
+      .single();
+
     // Send Discord notification
     notifyOfferAccepted({
       id: quote.id,
@@ -67,6 +84,15 @@ export async function POST(
       customer_name: quote.customer_name,
       total_incl_vat: quote.adjusted_total_incl_vat || quote.total_incl_vat,
     }).catch(err => console.error('Discord notification failed:', err));
+
+    // Send order confirmation email with portal link
+    if (newBooking) {
+      sendOrderConfirmationEmail({
+        customer_name: quote.customer_name,
+        customer_email: quote.customer_email,
+        customer_token: customerToken,
+      }).catch(err => console.error('Order confirmation email failed:', err));
+    }
 
     return NextResponse.json({
       success: true,

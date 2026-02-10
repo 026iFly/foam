@@ -43,7 +43,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Check for admin-only routes
-    if (pathname.startsWith('/admin/users')) {
+    if (pathname.startsWith('/admin/users') || pathname.startsWith('/admin/installers') || pathname.startsWith('/admin/reports')) {
       // Get user profile to check role
       const { data: profile } = await supabase
         .from('user_profiles')
@@ -52,9 +52,17 @@ export async function middleware(request: NextRequest) {
         .single();
 
       if (!profile || profile.role !== 'admin') {
-        // Redirect non-admins to the main admin page
         return NextResponse.redirect(new URL('/admin', request.url));
       }
+    }
+  }
+
+  // Protect installer routes
+  if (pathname.startsWith('/installer')) {
+    if (error || !user) {
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
     }
   }
 
@@ -67,5 +75,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/login'],
+  matcher: ['/admin/:path*', '/installer/:path*', '/login'],
 };

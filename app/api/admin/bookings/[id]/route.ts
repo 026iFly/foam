@@ -60,6 +60,15 @@ export async function GET(
       `)
       .eq('booking_id', bookingId);
 
+    // Fetch assigned installers
+    const { data: assignments } = await supabaseAdmin
+      .from('booking_installers')
+      .select(`
+        installer_id, is_lead, status, responded_at,
+        user_profiles (first_name, last_name, email, phone)
+      `)
+      .eq('booking_id', bookingId);
+
     // Flatten the response
     const flattenedBooking = {
       ...booking,
@@ -75,6 +84,17 @@ export async function GET(
           name: mat?.name,
           estimated_quantity: m.estimated_quantity,
           actual_quantity: m.actual_quantity,
+        };
+      }),
+      installers: (assignments || []).map((a) => {
+        const profile = a.user_profiles as unknown as { first_name: string; last_name: string; email: string; phone: string } | null;
+        return {
+          installer_id: a.installer_id,
+          is_lead: a.is_lead,
+          status: a.status,
+          name: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim(),
+          email: profile?.email,
+          phone: profile?.phone,
         };
       }),
       quote_requests: undefined,

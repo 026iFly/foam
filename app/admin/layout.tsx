@@ -49,6 +49,18 @@ export default async function AdminLayout({
                   Kalender
                 </Link>
                 <Link
+                  href="/admin/installers"
+                  className="text-sm text-gray-600 hover:text-gray-900"
+                >
+                  Installatörer
+                </Link>
+                <Link
+                  href="/admin/reports"
+                  className="text-sm text-gray-600 hover:text-gray-900"
+                >
+                  Rapporter
+                </Link>
+                <Link
                   href="/admin/settings"
                   className="text-sm text-gray-600 hover:text-gray-900"
                 >
@@ -121,6 +133,18 @@ export default async function AdminLayout({
             className="text-sm text-gray-600 hover:text-gray-900 whitespace-nowrap"
           >
             Kalender
+          </Link>
+          <Link
+            href="/admin/installers"
+            className="text-sm text-gray-600 hover:text-gray-900 whitespace-nowrap"
+          >
+            Installatörer
+          </Link>
+          <Link
+            href="/admin/reports"
+            className="text-sm text-gray-600 hover:text-gray-900 whitespace-nowrap"
+          >
+            Rapporter
           </Link>
           <Link
             href="/admin/settings"

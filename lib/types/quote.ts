@@ -45,6 +45,9 @@ export interface QuoteRequest {
   rot_customer_info: string | null;
   rot_info_token: string | null;
 
+  // Installer count
+  num_installers: number;
+
   // Offer signing
   offer_token: string | null;
   accepted_at: string | null;
@@ -185,6 +188,7 @@ export interface UpdateQuoteRequestInput {
   email_sent_at?: string;
   rot_customer_info?: string;
   rot_info_token?: string;
+  num_installers?: number;
 }
 
 // Query filters for listing quotes

@@ -53,16 +53,40 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    // Fetch installer assignments for all bookings
+    const bookingIds = (data || []).map((b) => b.id);
+    const { data: allAssignments } = bookingIds.length > 0
+      ? await supabaseAdmin
+          .from('booking_installers')
+          .select(`
+            booking_id, installer_id, is_lead, status,
+            user_profiles (first_name, last_name)
+          `)
+          .in('booking_id', bookingIds)
+      : { data: [] };
+
     // Flatten the response
-    const bookings = (data || []).map((booking) => ({
-      ...booking,
-      customer_name: booking.quote_requests?.customer_name,
-      customer_address: booking.quote_requests?.customer_address,
-      customer_phone: booking.quote_requests?.customer_phone,
-      customer_email: booking.quote_requests?.customer_email,
-      quote_value: booking.quote_requests?.adjusted_total_excl_vat || booking.quote_requests?.total_excl_vat,
-      quote_requests: undefined,
-    }));
+    const bookings = (data || []).map((booking) => {
+      const installers = (allAssignments || [])
+        .filter((a) => a.booking_id === booking.id)
+        .map((a) => ({
+          installer_id: a.installer_id,
+          is_lead: a.is_lead,
+          status: a.status,
+          name: `${(a.user_profiles as unknown as { first_name: string; last_name: string })?.first_name || ''} ${(a.user_profiles as unknown as { first_name: string; last_name: string })?.last_name || ''}`.trim(),
+        }));
+
+      return {
+        ...booking,
+        customer_name: booking.quote_requests?.customer_name,
+        customer_address: booking.quote_requests?.customer_address,
+        customer_phone: booking.quote_requests?.customer_phone,
+        customer_email: booking.quote_requests?.customer_email,
+        quote_value: booking.quote_requests?.adjusted_total_excl_vat || booking.quote_requests?.total_excl_vat,
+        installers,
+        quote_requests: undefined,
+      };
+    });
 
     return NextResponse.json({ bookings });
   } catch (err) {
@@ -75,7 +99,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { quote_id, booking_type, scheduled_date, scheduled_time, notes } = body;
+    const { quote_id, booking_type, scheduled_date, scheduled_time, notes, installer_ids, lead_id, num_installers, slot_type } = body;
 
     if (!booking_type || !scheduled_date) {
       return NextResponse.json(
@@ -94,6 +118,9 @@ export async function POST(request: NextRequest) {
         scheduled_time: scheduled_time || null,
         status: 'scheduled',
         notes: notes || null,
+        num_installers: num_installers || 2,
+        slot_type: slot_type || 'full',
+        customer_token: crypto.randomUUID(),
       })
       .select()
       .single();
@@ -101,6 +128,24 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('Error creating booking:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // Assign installers if provided
+    if (installer_ids && Array.isArray(installer_ids) && installer_ids.length > 0) {
+      const rows = installer_ids.map((installerId: string) => ({
+        booking_id: booking.id,
+        installer_id: installerId,
+        is_lead: installerId === lead_id,
+        status: 'pending',
+      }));
+
+      const { error: assignError } = await supabaseAdmin
+        .from('booking_installers')
+        .insert(rows);
+
+      if (assignError) {
+        console.error('Error assigning installers:', assignError);
+      }
     }
 
     // For installation bookings with a quote, add material requirements

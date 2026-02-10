@@ -284,6 +284,92 @@ export async function sendFollowUpEmail(
 }
 
 /**
+ * Send order confirmation email with customer portal link
+ */
+export async function sendOrderConfirmationEmail(
+  customer: {
+    customer_name: string;
+    customer_email: string;
+    customer_token: string;
+  }
+): Promise<boolean> {
+  const template = await getTemplate('order_confirmation');
+  if (!template) {
+    console.error('Order confirmation template not found');
+    return false;
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.intellifoam.se';
+  const portalLink = `${baseUrl}/kund/${customer.customer_token}`;
+
+  const variables = {
+    customer_name: customer.customer_name,
+    portal_link: portalLink,
+    company_name: 'Intellifoam',
+  };
+
+  const subject = replaceTemplateVariables(template.subject, variables);
+  const text = replaceTemplateVariables(template.body, variables);
+
+  return sendEmail({
+    to: customer.customer_email,
+    subject,
+    text,
+    html: text.replace(/\n/g, '<br>'),
+  });
+}
+
+/**
+ * Send installer confirmation request email
+ */
+export async function sendInstallerConfirmationEmail(
+  installer: {
+    name: string;
+    email: string;
+  },
+  booking: {
+    customer_name: string;
+    customer_address: string;
+    installation_date: string;
+    slot_type: string;
+    confirm_token: string;
+  }
+): Promise<boolean> {
+  const template = await getTemplate('installer_confirmation');
+  if (!template) {
+    console.error('Installer confirmation template not found');
+    return false;
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.intellifoam.se';
+  const confirmLink = `${baseUrl}/confirm/${booking.confirm_token}`;
+
+  const slotLabel = booking.slot_type === 'morning' ? 'Förmiddag' : booking.slot_type === 'afternoon' ? 'Eftermiddag' : 'Heldag';
+
+  const variables = {
+    installer_name: installer.name,
+    customer_name: booking.customer_name,
+    customer_address: booking.customer_address,
+    installation_date: new Date(booking.installation_date).toLocaleDateString('sv-SE', {
+      weekday: 'long', day: 'numeric', month: 'long',
+    }),
+    slot_type: slotLabel,
+    confirm_link: confirmLink,
+    company_name: 'Intellifoam',
+  };
+
+  const subject = replaceTemplateVariables(template.subject, variables);
+  const text = replaceTemplateVariables(template.body, variables);
+
+  return sendEmail({
+    to: installer.email,
+    subject,
+    text,
+    html: text.replace(/\n/g, '<br>'),
+  });
+}
+
+/**
  * Send custom email
  */
 export async function sendCustomEmail(

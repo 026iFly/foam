@@ -79,6 +79,7 @@ export async function PUT(
     if (body.quote_number !== undefined) updateData.quote_number = body.quote_number;
     if (body.quote_pdf_path !== undefined) updateData.quote_pdf_path = body.quote_pdf_path;
     if (body.quote_valid_until !== undefined) updateData.quote_valid_until = body.quote_valid_until;
+    if (body.num_installers !== undefined) updateData.num_installers = body.num_installers;
 
     const success = await updateQuoteRequest(parseInt(id), updateData);
 
