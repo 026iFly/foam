@@ -31,7 +31,7 @@ export async function POST(
       return NextResponse.json({ error: 'Bokning ej hittad' }, { status: 404 });
     }
 
-    if (booking.status !== 'scheduled') {
+    if (booking.status !== 'scheduled' && booking.status !== 'confirmed') {
       return NextResponse.json({ error: 'Bokningen kan inte ändras' }, { status: 400 });
     }
 

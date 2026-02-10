@@ -46,7 +46,7 @@ export default function CustomerVerifyPage() {
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
         <div className="text-center mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Intellifoam</h1>
-          <p className="text-gray-600 mt-2">Kundportal</p>
+          <p className="text-gray-700 mt-2">Kundportal</p>
         </div>
 
         <form onSubmit={handleVerify} className="space-y-4">
@@ -78,7 +78,7 @@ export default function CustomerVerifyPage() {
           </button>
         </form>
 
-        <p className="text-xs text-gray-600 text-center mt-6">
+        <p className="text-xs text-gray-700 text-center mt-6">
           Har du frågor? Kontakta oss på 010 703 74 00
         </p>
       </div>

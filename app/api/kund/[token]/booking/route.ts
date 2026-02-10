@@ -57,7 +57,7 @@ export async function GET(
     const daysUntilBooking = booking.scheduled_date
       ? Math.ceil((new Date(booking.scheduled_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
       : 0;
-    const canReschedule = daysUntilBooking >= rescheduleDaysBefore && booking.status === 'scheduled';
+    const canReschedule = daysUntilBooking >= rescheduleDaysBefore && (booking.status === 'scheduled' || booking.status === 'confirmed');
 
     return NextResponse.json({
       booking: {

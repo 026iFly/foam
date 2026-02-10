@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { QuoteRequest, QuoteStatus, CalculationData, BuildingPartRecommendation, RotCustomerInfo } from '@/lib/types/quote';
 import ConfirmInstallationModal from '@/app/admin/components/ConfirmInstallationModal';
+import InstallerPicker from '@/app/admin/components/InstallerPicker';
 
 const STATUS_LABELS: Record<QuoteStatus, string> = {
   pending: 'Väntar',
@@ -66,7 +67,18 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
     scheduled_date: string;
     scheduled_time: string;
     status: string;
+    installers?: Array<{
+      installer_id: string;
+      first_name: string;
+      last_name: string;
+      is_lead: boolean;
+      status: string;
+    }>;
   }>>([]);
+  const [selectedInstallerIds, setSelectedInstallerIds] = useState<string[]>([]);
+  const [leadInstallerId, setLeadInstallerId] = useState<string | undefined>();
+  const [assigningBookingId, setAssigningBookingId] = useState<number | null>(null);
+  const [savingAssignment, setSavingAssignment] = useState(false);
 
   // Status change state
   const [changingStatus, setChangingStatus] = useState(false);
@@ -127,6 +139,8 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
     setBookingDate(new Date().toISOString().split('T')[0]);
     setBookingTime('09:00');
     setBookingNotes('');
+    setSelectedInstallerIds([]);
+    setLeadInstallerId(undefined);
     setShowBookingModal(true);
   };
 
@@ -147,6 +161,8 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
           scheduled_date: bookingDate,
           scheduled_time: bookingTime,
           notes: bookingNotes,
+          installer_ids: selectedInstallerIds.length > 0 ? selectedInstallerIds : undefined,
+          lead_id: leadInstallerId,
         }),
       });
 
@@ -163,6 +179,38 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
       alert('Fel vid skapande av bokning');
     }
     setSavingBooking(false);
+  };
+
+  const openAssignInstallers = (booking: { id: number; scheduled_date: string; installers?: Array<{ installer_id: string; is_lead: boolean }> }) => {
+    setAssigningBookingId(booking.id);
+    setBookingDate(booking.scheduled_date);
+    setSelectedInstallerIds(booking.installers?.map(i => i.installer_id) || []);
+    setLeadInstallerId(booking.installers?.find(i => i.is_lead)?.installer_id);
+  };
+
+  const handleSaveAssignment = async () => {
+    if (!assigningBookingId) return;
+    setSavingAssignment(true);
+    try {
+      const res = await fetch(`/api/admin/bookings/${assigningBookingId}/assign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          installer_ids: selectedInstallerIds,
+          lead_id: leadInstallerId,
+        }),
+      });
+      if (res.ok) {
+        setAssigningBookingId(null);
+        fetchBookings();
+      } else {
+        const error = await res.json();
+        alert(`Fel: ${error.error || 'Kunde inte tilldela'}`);
+      }
+    } catch (err) {
+      console.error('Error assigning installers:', err);
+    }
+    setSavingAssignment(false);
   };
 
   const handleChangeStatus = async (newStatus: string) => {
@@ -1089,17 +1137,48 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                                 <span className="ml-2 capitalize">({booking.status})</span>
                               </div>
                             </div>
-                            {booking.booking_type === 'installation' &&
-                              booking.status !== 'completed' &&
-                              booking.status !== 'cancelled' && (
-                              <button
-                                onClick={() => setConfirmBookingId(booking.id)}
-                                className="ml-2 px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition whitespace-nowrap"
-                              >
-                                Bekräfta installation
-                              </button>
-                            )}
+                            <div className="flex gap-1">
+                              {booking.booking_type === 'installation' &&
+                                booking.status !== 'completed' &&
+                                booking.status !== 'cancelled' && (
+                                <button
+                                  onClick={() => setConfirmBookingId(booking.id)}
+                                  className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition whitespace-nowrap"
+                                >
+                                  Bekräfta
+                                </button>
+                              )}
+                            </div>
                           </div>
+                          {/* Assigned Installers */}
+                          {booking.installers && booking.installers.length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {booking.installers.map((inst) => (
+                                <span
+                                  key={inst.installer_id}
+                                  className={`text-xs px-1.5 py-0.5 rounded ${
+                                    inst.status === 'accepted' ? 'bg-green-100 text-green-700'
+                                      : inst.status === 'declined' ? 'bg-red-100 text-red-700'
+                                      : 'bg-yellow-100 text-yellow-700'
+                                  }`}
+                                >
+                                  {inst.first_name} {inst.last_name?.charAt(0)}.
+                                  {inst.is_lead && ' *'}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {/* Assign/Change Installers Button */}
+                          {booking.booking_type === 'installation' &&
+                            booking.status !== 'completed' &&
+                            booking.status !== 'cancelled' && (
+                            <button
+                              onClick={() => openAssignInstallers(booking)}
+                              className="mt-1 text-xs text-blue-600 hover:text-blue-800 underline"
+                            >
+                              {booking.installers && booking.installers.length > 0 ? 'Ändra installatörer' : 'Tilldela installatörer'}
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1482,6 +1561,24 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                 </select>
               </div>
 
+              {/* Installer Selection (for installations) */}
+              {bookingType === 'installation' && bookingDate && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Installatörer
+                  </label>
+                  <InstallerPicker
+                    date={bookingDate}
+                    selectedIds={selectedInstallerIds}
+                    leadId={leadInstallerId}
+                    onChange={(ids, lead) => {
+                      setSelectedInstallerIds(ids);
+                      setLeadInstallerId(lead);
+                    }}
+                  />
+                </div>
+              )}
+
               {/* Notes */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1587,6 +1684,51 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                 className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
               >
                 Stäng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Installers Modal */}
+      {assigningBookingId !== null && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h2 className="text-xl font-semibold text-gray-800">Tilldela installatörer</h2>
+              <button
+                onClick={() => setAssigningBookingId(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4">
+              <InstallerPicker
+                date={bookingDate}
+                selectedIds={selectedInstallerIds}
+                leadId={leadInstallerId}
+                onChange={(ids, lead) => {
+                  setSelectedInstallerIds(ids);
+                  setLeadInstallerId(lead);
+                }}
+              />
+            </div>
+            <div className="flex justify-end gap-2 p-4 border-t bg-gray-50">
+              <button
+                onClick={() => setAssigningBookingId(null)}
+                className="px-4 py-2 text-gray-700 hover:text-gray-900"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleSaveAssignment}
+                disabled={savingAssignment || selectedInstallerIds.length === 0}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+              >
+                {savingAssignment ? 'Sparar...' : 'Spara tilldelning'}
               </button>
             </div>
           </div>
