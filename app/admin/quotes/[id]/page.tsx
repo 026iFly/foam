@@ -4,6 +4,7 @@ import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { QuoteRequest, QuoteStatus, CalculationData, BuildingPartRecommendation, RotCustomerInfo } from '@/lib/types/quote';
+import ConfirmInstallationModal from '@/app/admin/components/ConfirmInstallationModal';
 
 const STATUS_LABELS: Record<QuoteStatus, string> = {
   pending: 'Väntar',
@@ -58,6 +59,7 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
   const [bookingTime, setBookingTime] = useState('09:00');
   const [bookingNotes, setBookingNotes] = useState('');
   const [savingBooking, setSavingBooking] = useState(false);
+  const [confirmBookingId, setConfirmBookingId] = useState<number | null>(null);
   const [quoteBookings, setQuoteBookings] = useState<Array<{
     id: number;
     booking_type: string;
@@ -1077,12 +1079,26 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                               : 'bg-blue-50 text-blue-800'
                           }`}
                         >
-                          <div className="font-medium">
-                            {booking.booking_type === 'installation' ? 'Installation' : 'Hembesök'}
-                          </div>
-                          <div className="text-xs opacity-75">
-                            {new Date(booking.scheduled_date).toLocaleDateString('sv-SE')} {booking.scheduled_time?.slice(0, 5)}
-                            <span className="ml-2 capitalize">({booking.status})</span>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-medium">
+                                {booking.booking_type === 'installation' ? 'Installation' : 'Hembesök'}
+                              </div>
+                              <div className="text-xs opacity-75">
+                                {new Date(booking.scheduled_date).toLocaleDateString('sv-SE')} {booking.scheduled_time?.slice(0, 5)}
+                                <span className="ml-2 capitalize">({booking.status})</span>
+                              </div>
+                            </div>
+                            {booking.booking_type === 'installation' &&
+                              booking.status !== 'completed' &&
+                              booking.status !== 'cancelled' && (
+                              <button
+                                onClick={() => setConfirmBookingId(booking.id)}
+                                className="ml-2 px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition whitespace-nowrap"
+                              >
+                                Bekräfta installation
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -1575,6 +1591,17 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
             </div>
           </div>
         </div>
+      )}
+
+      {confirmBookingId !== null && (
+        <ConfirmInstallationModal
+          bookingId={confirmBookingId}
+          onConfirm={() => {
+            setConfirmBookingId(null);
+            fetchBookings();
+          }}
+          onClose={() => setConfirmBookingId(null)}
+        />
       )}
     </div>
   );

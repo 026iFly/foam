@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import ConfirmInstallationModal from '@/app/admin/components/ConfirmInstallationModal';
 
 interface Booking {
   id: number;
@@ -51,6 +52,7 @@ export default function CalendarPage() {
     notes: '',
   });
   const [savingBooking, setSavingBooking] = useState(false);
+  const [confirmBookingId, setConfirmBookingId] = useState<number | null>(null);
 
   useEffect(() => {
     loadData();
@@ -328,34 +330,45 @@ export default function CalendarPage() {
                         </div>
                         <div className="space-y-2">
                           {bookingsByDate[date].map((booking) => (
-                            <Link
-                              key={booking.id}
-                              href={booking.quote_id ? `/admin/quotes/${booking.quote_id}` : '#'}
-                              className={`block p-3 rounded border-l-4 ${getBookingColor(booking)}`}
-                            >
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <div className="font-medium">
-                                    {booking.booking_type === 'installation' ? 'Installation' : 'Hembesök'}
+                            <div key={booking.id} className={`p-3 rounded border-l-4 ${getBookingColor(booking)}`}>
+                              <Link
+                                href={booking.quote_id ? `/admin/quotes/${booking.quote_id}` : '#'}
+                                className="block"
+                              >
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <div className="font-medium">
+                                      {booking.booking_type === 'installation' ? 'Installation' : 'Hembesök'}
+                                    </div>
+                                    {booking.customer_name && (
+                                      <div className="text-sm opacity-75">{booking.customer_name}</div>
+                                    )}
+                                    {booking.customer_address && (
+                                      <div className="text-sm opacity-75">{booking.customer_address}</div>
+                                    )}
                                   </div>
-                                  {booking.customer_name && (
-                                    <div className="text-sm opacity-75">{booking.customer_name}</div>
-                                  )}
-                                  {booking.customer_address && (
-                                    <div className="text-sm opacity-75">{booking.customer_address}</div>
-                                  )}
+                                  <div className="text-right text-sm">
+                                    {booking.scheduled_time && (
+                                      <div>{booking.scheduled_time}</div>
+                                    )}
+                                    <div className="capitalize opacity-75">{booking.status}</div>
+                                  </div>
                                 </div>
-                                <div className="text-right text-sm">
-                                  {booking.scheduled_time && (
-                                    <div>{booking.scheduled_time}</div>
-                                  )}
-                                  <div className="capitalize opacity-75">{booking.status}</div>
-                                </div>
-                              </div>
-                              {booking.notes && (
-                                <div className="text-sm opacity-75 mt-2">{booking.notes}</div>
+                                {booking.notes && (
+                                  <div className="text-sm opacity-75 mt-2">{booking.notes}</div>
+                                )}
+                              </Link>
+                              {booking.booking_type === 'installation' &&
+                                booking.status !== 'completed' &&
+                                booking.status !== 'cancelled' && (
+                                <button
+                                  onClick={() => setConfirmBookingId(booking.id)}
+                                  className="mt-2 px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition"
+                                >
+                                  Bekräfta installation
+                                </button>
                               )}
-                            </Link>
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -524,25 +537,36 @@ export default function CalendarPage() {
                   ) : (
                     <div className="space-y-2">
                       {getBookingsForDate(selectedDate).map(booking => (
-                        <Link
-                          key={booking.id}
-                          href={booking.quote_id ? `/admin/quotes/${booking.quote_id}` : '#'}
-                          className={`block p-3 rounded border-l-4 ${getBookingColor(booking)}`}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <div className="font-medium">
-                                {booking.booking_type === 'installation' ? 'Installation' : 'Hembesök'}
+                        <div key={booking.id} className={`p-3 rounded border-l-4 ${getBookingColor(booking)}`}>
+                          <Link
+                            href={booking.quote_id ? `/admin/quotes/${booking.quote_id}` : '#'}
+                            className="block"
+                          >
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <div className="font-medium">
+                                  {booking.booking_type === 'installation' ? 'Installation' : 'Hembesök'}
+                                </div>
+                                {booking.customer_name && (
+                                  <div className="text-sm opacity-75">{booking.customer_name}</div>
+                                )}
                               </div>
-                              {booking.customer_name && (
-                                <div className="text-sm opacity-75">{booking.customer_name}</div>
-                              )}
+                              <div className="text-sm">
+                                {booking.scheduled_time}
+                              </div>
                             </div>
-                            <div className="text-sm">
-                              {booking.scheduled_time}
-                            </div>
-                          </div>
-                        </Link>
+                          </Link>
+                          {booking.booking_type === 'installation' &&
+                            booking.status !== 'completed' &&
+                            booking.status !== 'cancelled' && (
+                            <button
+                              onClick={() => setConfirmBookingId(booking.id)}
+                              className="mt-2 px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition"
+                            >
+                              Bekräfta installation
+                            </button>
+                          )}
+                        </div>
                       ))}
                     </div>
                   )}
@@ -689,6 +713,17 @@ export default function CalendarPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {confirmBookingId !== null && (
+        <ConfirmInstallationModal
+          bookingId={confirmBookingId}
+          onConfirm={() => {
+            setConfirmBookingId(null);
+            loadData();
+          }}
+          onClose={() => setConfirmBookingId(null)}
+        />
       )}
     </div>
   );
