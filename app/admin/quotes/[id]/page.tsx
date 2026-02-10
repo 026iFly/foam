@@ -79,6 +79,11 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
   const [leadInstallerId, setLeadInstallerId] = useState<string | undefined>();
   const [assigningBookingId, setAssigningBookingId] = useState<number | null>(null);
   const [savingAssignment, setSavingAssignment] = useState(false);
+  const [editingBookingId, setEditingBookingId] = useState<number | null>(null);
+  const [editBookingDate, setEditBookingDate] = useState('');
+  const [editBookingTime, setEditBookingTime] = useState('');
+  const [savingBookingEdit, setSavingBookingEdit] = useState(false);
+  const [deletingBookingId, setDeletingBookingId] = useState<number | null>(null);
 
   // Status change state
   const [changingStatus, setChangingStatus] = useState(false);
@@ -211,6 +216,58 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
       console.error('Error assigning installers:', err);
     }
     setSavingAssignment(false);
+  };
+
+  const openEditBooking = (booking: { id: number; scheduled_date: string; scheduled_time: string }) => {
+    setEditingBookingId(booking.id);
+    setEditBookingDate(booking.scheduled_date);
+    setEditBookingTime(booking.scheduled_time?.slice(0, 5) || '09:00');
+  };
+
+  const handleSaveBookingEdit = async () => {
+    if (!editingBookingId || !editBookingDate) return;
+    setSavingBookingEdit(true);
+    try {
+      const res = await fetch(`/api/admin/bookings/${editingBookingId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scheduled_date: editBookingDate,
+          scheduled_time: editBookingTime,
+        }),
+      });
+      if (res.ok) {
+        setEditingBookingId(null);
+        fetchBookings();
+      } else {
+        const error = await res.json();
+        alert(`Fel: ${error.error || 'Kunde inte uppdatera bokning'}`);
+      }
+    } catch (err) {
+      console.error('Error updating booking:', err);
+      alert('Fel vid uppdatering av bokning');
+    }
+    setSavingBookingEdit(false);
+  };
+
+  const handleDeleteBooking = async (bookingId: number) => {
+    if (!confirm('Är du säker på att du vill ta bort denna bokning? Detta kan inte ångras.')) return;
+    setDeletingBookingId(bookingId);
+    try {
+      const res = await fetch(`/api/admin/bookings/${bookingId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        fetchBookings();
+      } else {
+        const error = await res.json();
+        alert(`Fel: ${error.error || 'Kunde inte ta bort bokning'}`);
+      }
+    } catch (err) {
+      console.error('Error deleting booking:', err);
+      alert('Fel vid borttagning av bokning');
+    }
+    setDeletingBookingId(null);
   };
 
   const handleChangeStatus = async (newStatus: string) => {
@@ -1168,16 +1225,31 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                               ))}
                             </div>
                           )}
-                          {/* Assign/Change Installers Button */}
-                          {booking.booking_type === 'installation' &&
-                            booking.status !== 'completed' &&
-                            booking.status !== 'cancelled' && (
-                            <button
-                              onClick={() => openAssignInstallers(booking)}
-                              className="mt-1 text-xs text-blue-600 hover:text-blue-800 underline"
-                            >
-                              {booking.installers && booking.installers.length > 0 ? 'Ändra installatörer' : 'Tilldela installatörer'}
-                            </button>
+                          {/* Action buttons */}
+                          {booking.status !== 'completed' && booking.status !== 'cancelled' && (
+                            <div className="mt-1 flex flex-wrap gap-2">
+                              {booking.booking_type === 'installation' && (
+                                <button
+                                  onClick={() => openAssignInstallers(booking)}
+                                  className="text-xs text-blue-600 hover:text-blue-800 underline"
+                                >
+                                  {booking.installers && booking.installers.length > 0 ? 'Ändra installatörer' : 'Tilldela installatörer'}
+                                </button>
+                              )}
+                              <button
+                                onClick={() => openEditBooking(booking)}
+                                className="text-xs text-gray-700 hover:text-gray-900 underline"
+                              >
+                                Ändra datum
+                              </button>
+                              <button
+                                onClick={() => handleDeleteBooking(booking.id)}
+                                disabled={deletingBookingId === booking.id}
+                                className="text-xs text-red-600 hover:text-red-800 underline disabled:opacity-50"
+                              >
+                                {deletingBookingId === booking.id ? 'Tar bort...' : 'Ta bort'}
+                              </button>
+                            </div>
                           )}
                         </div>
                       ))}
@@ -1729,6 +1801,60 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
               >
                 {savingAssignment ? 'Sparar...' : 'Spara tilldelning'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Booking Date Modal */}
+      {editingBookingId !== null && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm mx-4">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h2 className="text-lg font-semibold text-gray-900">Ändra datum</h2>
+              <button
+                onClick={() => setEditingBookingId(null)}
+                className="text-gray-700 hover:text-gray-900"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Datum</label>
+                <input
+                  type="date"
+                  value={editBookingDate}
+                  onChange={(e) => setEditBookingDate(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tid</label>
+                <input
+                  type="time"
+                  value={editBookingTime}
+                  onChange={(e) => setEditBookingTime(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 p-4 border-t bg-gray-50">
+              <button
+                onClick={() => setEditingBookingId(null)}
+                className="px-4 py-2 text-gray-700 hover:text-gray-900"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleSaveBookingEdit}
+                disabled={savingBookingEdit || !editBookingDate}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+              >
+                {savingBookingEdit ? 'Sparar...' : 'Spara'}
               </button>
             </div>
           </div>
