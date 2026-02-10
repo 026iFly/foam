@@ -110,7 +110,7 @@ export default function InstallerPicker({
                 readOnly
                 className="rounded"
               />
-              <span className="text-sm font-medium">{inst.installerName}</span>
+              <span className="text-sm font-medium text-gray-900">{inst.installerName}</span>
               <span className="text-xs text-gray-600">#{inst.priorityOrder}</span>
             </div>
             {isSelected && (
@@ -122,7 +122,7 @@ export default function InstallerPicker({
                 className={`text-xs px-2 py-0.5 rounded ${
                   isLead
                     ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-gray-100 text-gray-500 hover:bg-yellow-50'
+                    : 'bg-gray-100 text-gray-700 hover:bg-yellow-50'
                 }`}
               >
                 {isLead ? 'Ansvarig' : 'Gör ansvarig'}
@@ -141,8 +141,8 @@ export default function InstallerPicker({
               key={inst.installerId}
               className="flex items-center justify-between rounded px-3 py-1.5 opacity-50"
             >
-              <span className="text-sm text-gray-500">{inst.installerName}</span>
-              <span className="text-xs text-red-500">{inst.reason}</span>
+              <span className="text-sm text-gray-700">{inst.installerName}</span>
+              <span className="text-xs text-red-600">{inst.reason}</span>
             </div>
           ))}
         </div>

@@ -11,6 +11,7 @@ interface UserProfile {
   last_name: string | null;
   phone: string | null;
   role: string;
+  installer_type: string | null;
   profile_photo_url: string | null;
   created_at: string;
 }
@@ -29,6 +30,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
   const [role, setRole] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [installerType, setInstallerType] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -51,6 +53,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
       setLastName(data.user.last_name || '');
       setPhone(data.user.phone || '');
       setRole(data.user.role);
+      setInstallerType(data.user.installer_type || null);
     } catch (err) {
       setError('Nagot gick fel');
     } finally {
@@ -69,6 +72,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
         firstName,
         lastName,
         phone,
+        installer_type: installerType,
       };
 
       if (newPassword) {
@@ -311,6 +315,49 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
               </div>
             </div>
 
+            {/* Installer Privileges */}
+            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+              <h2 className="text-xl font-semibold mb-4 text-gray-900">Installatörsbehörighet</h2>
+              <p className="text-sm text-gray-700 mb-3">
+                Om denna användare även ska kunna arbeta som installatör, välj typ nedan. Användaren visas då i installatörslistan och kan tilldelas bokningar.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setInstallerType(null)}
+                  className={`px-4 py-2 rounded-lg font-medium transition text-sm ${
+                    !installerType
+                      ? 'bg-gray-800 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Ej installatör
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInstallerType('employee')}
+                  className={`px-4 py-2 rounded-lg font-medium transition text-sm ${
+                    installerType === 'employee'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Anställd
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInstallerType('subcontractor')}
+                  className={`px-4 py-2 rounded-lg font-medium transition text-sm ${
+                    installerType === 'subcontractor'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Underentreprenad
+                </button>
+              </div>
+            </div>
+
             {/* Password */}
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
               <h2 className="text-xl font-semibold mb-4 text-gray-900">
@@ -330,7 +377,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
                   />
                 </div>
                 <div className="text-center">
-                  <span className="text-gray-500">eller</span>
+                  <span className="text-gray-600">eller</span>
                 </div>
                 <button
                   type="button"
