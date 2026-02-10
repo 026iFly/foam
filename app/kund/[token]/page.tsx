@@ -59,7 +59,7 @@ export default function CustomerVerifyPage() {
               value={surname}
               onChange={(e) => setSurname(e.target.value)}
               placeholder="Efternamn"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               autoFocus
               required
             />

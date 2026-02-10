@@ -199,15 +199,15 @@ export default function CustomerPortalPage() {
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-sm text-gray-700">Datum</span>
-              <span className="text-sm font-medium">{formatDate(booking.scheduled_date)}</span>
+              <span className="text-sm font-medium text-gray-900">{formatDate(booking.scheduled_date)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-gray-700">Tid</span>
-              <span className="text-sm font-medium">{formatSlot(booking.slot_type)}</span>
+              <span className="text-sm font-medium text-gray-900">{formatSlot(booking.slot_type)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-gray-700">Adress</span>
-              <span className="text-sm font-medium">{customer.address}</span>
+              <span className="text-sm font-medium text-gray-900">{customer.address}</span>
             </div>
           </div>
         </div>
@@ -220,7 +220,7 @@ export default function CustomerPortalPage() {
               {installers.map((inst, idx) => (
                 <div key={idx} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm">{inst.first_name}</span>
+                    <span className="text-sm text-gray-900">{inst.first_name}</span>
                     {inst.is_lead && (
                       <span className="text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded">
                         Ansvarig
@@ -244,17 +244,17 @@ export default function CustomerPortalPage() {
               {quote.quote_number && (
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-700">Offertnummer</span>
-                  <span className="text-sm font-medium">{quote.quote_number}</span>
+                  <span className="text-sm font-medium text-gray-900">{quote.quote_number}</span>
                 </div>
               )}
               <div className="flex justify-between">
                 <span className="text-sm text-gray-700">Total inkl moms</span>
-                <span className="text-sm font-medium">{formatCurrency(quote.total_incl_vat)}</span>
+                <span className="text-sm font-medium text-gray-900">{formatCurrency(quote.total_incl_vat)}</span>
               </div>
               {quote.rot_deduction > 0 && (
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-700">ROT-avdrag</span>
-                  <span className="text-sm font-medium text-green-600">-{formatCurrency(quote.rot_deduction)}</span>
+                  <span className="text-sm font-medium text-green-700">-{formatCurrency(quote.rot_deduction)}</span>
                 </div>
               )}
             </div>
@@ -287,7 +287,7 @@ export default function CustomerPortalPage() {
                 <select
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-900"
                 >
                   <option value="">Välj datum...</option>
                   {availableDates.map((d) => (
