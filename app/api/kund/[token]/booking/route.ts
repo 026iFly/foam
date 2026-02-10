@@ -68,6 +68,7 @@ export async function GET(
         booking_type: booking.booking_type,
         slot_type: booking.slot_type,
         num_installers: booking.num_installers,
+        customer_booked_at: booking.customer_booked_at,
       },
       customer: {
         name: quoteData?.customer_name,

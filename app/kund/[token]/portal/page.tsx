@@ -12,6 +12,7 @@ interface BookingData {
     booking_type: string;
     slot_type: string;
     num_installers: number;
+    customer_booked_at: string | null;
   };
   customer: {
     name: string;
@@ -42,12 +43,16 @@ export default function CustomerPortalPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Reschedule state
-  const [showReschedule, setShowReschedule] = useState(false);
+  // Self-booking state
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState('');
-  const [rescheduling, setRescheduling] = useState(false);
+  const [booking, setBooking] = useState(false);
   const [loadingSlots, setLoadingSlots] = useState(false);
+
+  // Reschedule state
+  const [showReschedule, setShowReschedule] = useState(false);
+  const [rescheduling, setRescheduling] = useState(false);
 
   const fetchBooking = useCallback(async () => {
     try {
@@ -75,8 +80,7 @@ export default function CustomerPortalPage() {
     fetchBooking();
   }, [token, router, fetchBooking]);
 
-  const openReschedule = async () => {
-    setShowReschedule(true);
+  const fetchAvailableSlots = async () => {
     setLoadingSlots(true);
     try {
       const res = await fetch(`/api/kund/${token}/available-slots`);
@@ -87,6 +91,41 @@ export default function CustomerPortalPage() {
     } finally {
       setLoadingSlots(false);
     }
+  };
+
+  const openDatePicker = async () => {
+    setShowDatePicker(true);
+    setSelectedDate('');
+    await fetchAvailableSlots();
+  };
+
+  const handleBookDate = async () => {
+    if (!selectedDate) return;
+    setBooking(true);
+    try {
+      const res = await fetch(`/api/kund/${token}/book`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: selectedDate }),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        setError(result.error || 'Kunde inte boka datum');
+        return;
+      }
+      setShowDatePicker(false);
+      fetchBooking();
+    } catch {
+      setError('Bokning misslyckades');
+    } finally {
+      setBooking(false);
+    }
+  };
+
+  const openReschedule = async () => {
+    setShowReschedule(true);
+    setSelectedDate('');
+    await fetchAvailableSlots();
   };
 
   const handleReschedule = async () => {
@@ -161,8 +200,9 @@ export default function CustomerPortalPage() {
 
   if (!data) return null;
 
-  const { booking, customer, quote, installers, can_reschedule, reschedule_deadline_days } = data;
-  const statusInfo = formatStatus(booking.status);
+  const { booking: bookingInfo, customer, quote, installers, can_reschedule, reschedule_deadline_days } = data;
+  const statusInfo = formatStatus(bookingInfo.status);
+  const needsDateSelection = !bookingInfo.customer_booked_at && bookingInfo.status === 'scheduled';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -187,24 +227,85 @@ export default function CustomerPortalPage() {
           </p>
         </div>
 
+        {/* Self-Booking: Customer picks installation date */}
+        {needsDateSelection && !showDatePicker && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg shadow p-6">
+            <h3 className="text-md font-semibold text-gray-900 mb-2">Välj installationsdatum</h3>
+            <p className="text-sm text-gray-700 mb-4">
+              Tack för din beställning! Välj ett datum som passar dig för installationen.
+            </p>
+            <button
+              onClick={openDatePicker}
+              className="w-full bg-blue-600 text-white rounded-lg py-3 text-sm font-medium hover:bg-blue-700"
+            >
+              Välj datum
+            </button>
+          </div>
+        )}
+
+        {showDatePicker && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-md font-semibold text-gray-900 mb-3">Välj installationsdatum</h3>
+
+            {loadingSlots ? (
+              <p className="text-sm text-gray-700">Hämtar tillgängliga datum...</p>
+            ) : availableDates.length > 0 ? (
+              <div className="space-y-3">
+                <select
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-900"
+                >
+                  <option value="">Välj datum...</option>
+                  {availableDates.map((d) => (
+                    <option key={d} value={d}>{formatDate(d)}</option>
+                  ))}
+                </select>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleBookDate}
+                    disabled={!selectedDate || booking}
+                    className="flex-1 bg-blue-600 text-white rounded-lg py-3 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {booking ? 'Bokar...' : 'Bekräfta datum'}
+                  </button>
+                  <button
+                    onClick={() => setShowDatePicker(false)}
+                    className="px-4 bg-gray-100 text-gray-700 rounded-lg py-3 text-sm hover:bg-gray-200"
+                  >
+                    Avbryt
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-700">Inga tillgängliga datum just nu. Kontakta oss för hjälp.</p>
+            )}
+          </div>
+        )}
+
         {/* Booking Status */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-md font-semibold text-gray-900">Din bokning</h3>
             <span className={`text-xs px-3 py-1 rounded-full font-medium ${statusInfo.color}`}>
-              {statusInfo.label}
+              {needsDateSelection ? 'Väntar på datum' : statusInfo.label}
             </span>
           </div>
 
           <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-700">Datum</span>
-              <span className="text-sm font-medium text-gray-900">{formatDate(booking.scheduled_date)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-700">Tid</span>
-              <span className="text-sm font-medium text-gray-900">{formatSlot(booking.slot_type)}</span>
-            </div>
+            {!needsDateSelection && (
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-700">Datum</span>
+                <span className="text-sm font-medium text-gray-900">{formatDate(bookingInfo.scheduled_date)}</span>
+              </div>
+            )}
+            {!needsDateSelection && (
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-700">Tid</span>
+                <span className="text-sm font-medium text-gray-900">{formatSlot(bookingInfo.slot_type)}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-sm text-gray-700">Adress</span>
               <span className="text-sm font-medium text-gray-900">{customer.address}</span>

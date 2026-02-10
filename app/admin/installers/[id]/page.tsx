@@ -249,18 +249,18 @@ export default function InstallerDetailPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">E-post</label>
-            <p className="text-sm text-gray-600">{installer.email}</p>
+            <p className="text-sm text-gray-900">{installer.email}</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
-            <p className="text-sm text-gray-600">{installer.phone || '-'}</p>
+            <p className="text-sm text-gray-900">{installer.phone || '-'}</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Typ</label>
             <select
               value={formType}
               onChange={(e) => setFormType(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900"
             >
               <option value="">Välj typ...</option>
               <option value="employee">Anställd</option>
@@ -275,7 +275,7 @@ export default function InstallerDetailPage() {
               type="number"
               value={formRate}
               onChange={(e) => setFormRate(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900"
               placeholder="0"
             />
           </div>
@@ -287,7 +287,7 @@ export default function InstallerDetailPage() {
               type="date"
               value={formHardplast}
               onChange={(e) => setFormHardplast(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900"
             />
             {formHardplast && new Date(formHardplast) < new Date() && (
               <p className="text-xs text-red-600 mt-1">Certifikatet har utgått - installatören blockeras automatiskt.</p>
@@ -325,12 +325,12 @@ export default function InstallerDetailPage() {
             type="date"
             value={blockDate}
             onChange={(e) => setBlockDate(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-2 text-sm"
+            className="border border-gray-300 rounded px-3 py-2 text-sm text-gray-900"
           />
           <select
             value={blockSlot}
             onChange={(e) => setBlockSlot(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-2 text-sm"
+            className="border border-gray-300 rounded px-3 py-2 text-sm text-gray-900"
           >
             <option value="full">Heldag</option>
             <option value="morning">Förmiddag</option>
@@ -431,7 +431,7 @@ export default function InstallerDetailPage() {
                 <select
                   value={contractForm.contract_type}
                   onChange={(e) => setContractForm({ ...contractForm, contract_type: e.target.value })}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900"
                 >
                   <option value="employee">Anställningsavtal</option>
                   <option value="subcontractor">Underentreprenadavtal</option>
@@ -443,7 +443,7 @@ export default function InstallerDetailPage() {
                   type="date"
                   value={contractForm.valid_from}
                   onChange={(e) => setContractForm({ ...contractForm, valid_from: e.target.value })}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900"
                 />
               </div>
               <div>
@@ -452,7 +452,7 @@ export default function InstallerDetailPage() {
                   type="date"
                   value={contractForm.valid_to}
                   onChange={(e) => setContractForm({ ...contractForm, valid_to: e.target.value })}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900"
                 />
               </div>
               <div>
@@ -462,7 +462,7 @@ export default function InstallerDetailPage() {
                   value={contractForm.notes}
                   onChange={(e) => setContractForm({ ...contractForm, notes: e.target.value })}
                   placeholder="Valfria anteckningar"
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900"
                 />
               </div>
             </div>

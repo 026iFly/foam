@@ -121,6 +121,20 @@ Hör av dig om du har frågor!
 Med vänliga hälsningar,
 Intellifoam`,
       },
+      order_confirmation: {
+        subject: 'Tack för din beställning - Intellifoam',
+        body: `Hej {{customer_name}},
+
+Tack för din beställning! Vi har tagit emot den och börjar planera din installation.
+
+Logga in på din kundportal för att välja installationsdatum och se detaljer:
+{{portal_link}}
+
+Har du frågor? Kontakta oss på 010 703 74 00 eller info@intellifoam.se.
+
+Med vänliga hälsningar,
+Intellifoam`,
+      },
     };
 
     return fallbacks[type] || null;
