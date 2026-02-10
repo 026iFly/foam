@@ -144,7 +144,7 @@ export default function CustomerPortalPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-pulse text-gray-500">Laddar...</div>
+        <div className="animate-pulse text-gray-600">Laddar...</div>
       </div>
     );
   }
@@ -170,7 +170,7 @@ export default function CustomerPortalPage() {
       <div className="bg-white border-b">
         <div className="max-w-2xl mx-auto px-4 py-4">
           <h1 className="text-xl font-bold text-gray-900">Intellifoam</h1>
-          <p className="text-sm text-gray-500">Kundportal</p>
+          <p className="text-sm text-gray-600">Kundportal</p>
         </div>
       </div>
 
@@ -198,19 +198,19 @@ export default function CustomerPortalPage() {
 
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-sm text-gray-500">Datum</span>
+              <span className="text-sm text-gray-600">Datum</span>
               <span className="text-sm font-medium">{formatDate(booking.scheduled_date)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-500">Tid</span>
+              <span className="text-sm text-gray-600">Tid</span>
               <span className="text-sm font-medium">{formatSlot(booking.slot_type)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-500">Adress</span>
+              <span className="text-sm text-gray-600">Adress</span>
               <span className="text-sm font-medium">{customer.address}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-500">Antal installatörer</span>
+              <span className="text-sm text-gray-600">Antal installatörer</span>
               <span className="text-sm font-medium">{booking.num_installers} st</span>
             </div>
           </div>
@@ -247,17 +247,17 @@ export default function CustomerPortalPage() {
             <div className="space-y-2">
               {quote.quote_number && (
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Offertnummer</span>
+                  <span className="text-sm text-gray-600">Offertnummer</span>
                   <span className="text-sm font-medium">{quote.quote_number}</span>
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Total inkl moms</span>
+                <span className="text-sm text-gray-600">Total inkl moms</span>
                 <span className="text-sm font-medium">{formatCurrency(quote.total_incl_vat)}</span>
               </div>
               {quote.rot_deduction > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">ROT-avdrag</span>
+                  <span className="text-sm text-gray-600">ROT-avdrag</span>
                   <span className="text-sm font-medium text-green-600">-{formatCurrency(quote.rot_deduction)}</span>
                 </div>
               )}
@@ -274,7 +274,7 @@ export default function CustomerPortalPage() {
             >
               Boka om installation
             </button>
-            <p className="text-xs text-gray-400 text-center mt-2">
+            <p className="text-xs text-gray-600 text-center mt-2">
               Ombokning måste ske minst {reschedule_deadline_days} dagar innan installationsdatumet.
             </p>
           </div>
@@ -285,7 +285,7 @@ export default function CustomerPortalPage() {
             <h3 className="text-md font-semibold text-gray-900 mb-3">Välj nytt datum</h3>
 
             {loadingSlots ? (
-              <p className="text-sm text-gray-400">Hämtar tillgängliga datum...</p>
+              <p className="text-sm text-gray-600">Hämtar tillgängliga datum...</p>
             ) : availableDates.length > 0 ? (
               <div className="space-y-3">
                 <select
@@ -316,14 +316,14 @@ export default function CustomerPortalPage() {
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-gray-500">Inga tillgängliga datum just nu. Kontakta oss för hjälp.</p>
+              <p className="text-sm text-gray-600">Inga tillgängliga datum just nu. Kontakta oss för hjälp.</p>
             )}
           </div>
         )}
 
         {/* Contact Info */}
         <div className="text-center py-4">
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-600">
             Frågor? Ring 010 703 74 00 eller mejla info@intellifoam.se
           </p>
         </div>

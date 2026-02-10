@@ -71,11 +71,11 @@ export default function InstallerPicker({
   };
 
   if (!date) {
-    return <p className="text-sm text-gray-400">Välj ett datum först.</p>;
+    return <p className="text-sm text-gray-600">Välj ett datum först.</p>;
   }
 
   if (loading) {
-    return <p className="text-sm text-gray-400">Hämtar tillgänglighet...</p>;
+    return <p className="text-sm text-gray-600">Hämtar tillgänglighet...</p>;
   }
 
   const available = installers.filter((i) => i.available);
@@ -83,7 +83,7 @@ export default function InstallerPicker({
 
   return (
     <div className="space-y-2">
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-gray-600">
         {available.length} tillgängliga av {installers.length} installatörer
         {selectedIds.length > 0 && ` | ${selectedIds.length} valda`}
       </p>
@@ -111,7 +111,7 @@ export default function InstallerPicker({
                 className="rounded"
               />
               <span className="text-sm font-medium">{inst.installerName}</span>
-              <span className="text-xs text-gray-400">#{inst.priorityOrder}</span>
+              <span className="text-xs text-gray-600">#{inst.priorityOrder}</span>
             </div>
             {isSelected && (
               <button
@@ -135,7 +135,7 @@ export default function InstallerPicker({
       {/* Unavailable installers */}
       {unavailable.length > 0 && (
         <div className="mt-2 pt-2 border-t border-gray-200">
-          <p className="text-xs text-gray-400 mb-1">Ej tillgängliga:</p>
+          <p className="text-xs text-gray-600 mb-1">Ej tillgängliga:</p>
           {unavailable.map((inst) => (
             <div
               key={inst.installerId}
@@ -149,7 +149,7 @@ export default function InstallerPicker({
       )}
 
       {installers.length === 0 && (
-        <p className="text-sm text-gray-400">Inga installatörer registrerade.</p>
+        <p className="text-sm text-gray-600">Inga installatörer registrerade.</p>
       )}
     </div>
   );

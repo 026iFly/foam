@@ -82,7 +82,7 @@ export default function InstallerBookingsPage() {
                     <p className="font-medium text-gray-900">{quoteData?.customer_name || '-'}</p>
                     <p className="text-sm text-gray-600">{quoteData?.customer_address || ''}</p>
                     {booking && (
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-sm text-gray-600 mt-1">
                         {formatSlot(booking.slot_type)}
                       </p>
                     )}
@@ -115,7 +115,7 @@ export default function InstallerBookingsPage() {
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow p-8 text-center">
-          <p className="text-gray-500">Inga bokningar.</p>
+          <p className="text-gray-600">Inga bokningar.</p>
         </div>
       )}
     </div>

@@ -115,11 +115,11 @@ export default function InstallersPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Installatörer</h1>
         {saving && (
-          <span className="text-sm text-gray-500">Sparar prioritet...</span>
+          <span className="text-sm text-gray-600">Sparar prioritet...</span>
         )}
       </div>
 
-      <p className="text-sm text-gray-500 mb-4">
+      <p className="text-sm text-gray-600 mb-4">
         Dra och släpp för att ändra prioritetsordning. Högre prioritet = tilldelas först.
       </p>
 
@@ -149,12 +149,12 @@ export default function InstallersPage() {
                   draggedId === installer.id ? 'opacity-50' : ''
                 } ${!installer.is_active ? 'opacity-60' : ''}`}
               >
-                <td className="px-3 py-3 text-sm text-gray-400">{index + 1}</td>
+                <td className="px-3 py-3 text-sm text-gray-600">{index + 1}</td>
                 <td className="px-4 py-3">
                   <div className="text-sm font-medium text-gray-900">
                     {installer.first_name} {installer.last_name}
                   </div>
-                  <div className="text-xs text-gray-500">{installer.email}</div>
+                  <div className="text-xs text-gray-600">{installer.email}</div>
                 </td>
                 <td className="px-4 py-3">
                   <span className={`text-xs px-2 py-1 rounded-full ${
@@ -167,8 +167,15 @@ export default function InstallersPage() {
                     {formatType(installer.installer_type)}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600">
-                  {installer.hourly_rate ? `${installer.hourly_rate} kr/h` : '-'}
+                <td className="px-4 py-3 text-sm text-gray-700">
+                  {installer.hourly_rate ? (
+                    <>
+                      {installer.hourly_rate} kr/h
+                      <span className="text-xs text-gray-600 ml-1">
+                        {installer.installer_type === 'employee' ? '(lön)' : '(exkl moms)'}
+                      </span>
+                    </>
+                  ) : '-'}
                 </td>
                 <td className="px-4 py-3">
                   {installer.hardplast_expiry ? (
@@ -182,7 +189,7 @@ export default function InstallersPage() {
                       {new Date(installer.hardplast_expiry).toLocaleDateString('sv-SE')}
                     </span>
                   ) : (
-                    <span className="text-xs text-gray-400">Ej angiven</span>
+                    <span className="text-xs text-gray-600">Ej angiven</span>
                   )}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600">
@@ -212,8 +219,8 @@ export default function InstallersPage() {
             ))}
             {installers.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
-                  Inga installatörer hittade. Lägg till användare med rollen &quot;installer&quot; under Användare.
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-600">
+                  Inga installatörer hittade. Ange installatörstyp på en användare för att lägga till dem här.
                 </td>
               </tr>
             )}

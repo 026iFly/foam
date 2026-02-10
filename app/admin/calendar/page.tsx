@@ -3,6 +3,15 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import ConfirmInstallationModal from '@/app/admin/components/ConfirmInstallationModal';
+import InstallerPicker from '@/app/admin/components/InstallerPicker';
+
+interface BookingInstaller {
+  installer_id: string;
+  first_name: string;
+  last_name: string;
+  is_lead: boolean;
+  status: string;
+}
 
 interface Booking {
   id: number;
@@ -15,6 +24,7 @@ interface Booking {
   customer_name?: string;
   customer_address?: string;
   quote_value?: number;
+  installers?: BookingInstaller[];
 }
 
 interface Material {
@@ -53,6 +63,8 @@ export default function CalendarPage() {
   });
   const [savingBooking, setSavingBooking] = useState(false);
   const [confirmBookingId, setConfirmBookingId] = useState<number | null>(null);
+  const [selectedInstallerIds, setSelectedInstallerIds] = useState<string[]>([]);
+  const [leadInstallerId, setLeadInstallerId] = useState<string | undefined>();
 
   useEffect(() => {
     loadData();
@@ -100,6 +112,8 @@ export default function CalendarPage() {
       scheduled_time: '09:00',
       notes: '',
     });
+    setSelectedInstallerIds([]);
+    setLeadInstallerId(undefined);
     setShowBookingModal(true);
   };
 
@@ -120,6 +134,8 @@ export default function CalendarPage() {
           scheduled_date: bookingForm.scheduled_date,
           scheduled_time: bookingForm.scheduled_time,
           notes: bookingForm.notes,
+          installer_ids: selectedInstallerIds.length > 0 ? selectedInstallerIds : undefined,
+          lead_id: leadInstallerId,
         }),
       });
 
@@ -354,6 +370,23 @@ export default function CalendarPage() {
                                     <div className="capitalize opacity-75">{booking.status}</div>
                                   </div>
                                 </div>
+                                {booking.installers && booking.installers.length > 0 && (
+                                  <div className="text-xs mt-1 flex flex-wrap gap-1">
+                                    {booking.installers.map((inst) => (
+                                      <span
+                                        key={inst.installer_id}
+                                        className={`px-1.5 py-0.5 rounded ${
+                                          inst.status === 'accepted' ? 'bg-green-100 text-green-700'
+                                            : inst.status === 'declined' ? 'bg-red-100 text-red-700'
+                                            : 'bg-yellow-100 text-yellow-700'
+                                        }`}
+                                      >
+                                        {inst.first_name} {inst.last_name?.charAt(0)}.
+                                        {inst.is_lead && ' *'}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
                                 {booking.notes && (
                                   <div className="text-sm opacity-75 mt-2">{booking.notes}</div>
                                 )}
@@ -680,6 +713,24 @@ export default function CalendarPage() {
                   ))}
                 </select>
               </div>
+
+              {/* Installer Selection */}
+              {bookingForm.booking_type === 'installation' && bookingForm.scheduled_date && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Installatörer
+                  </label>
+                  <InstallerPicker
+                    date={bookingForm.scheduled_date}
+                    selectedIds={selectedInstallerIds}
+                    leadId={leadInstallerId}
+                    onChange={(ids, lead) => {
+                      setSelectedInstallerIds(ids);
+                      setLeadInstallerId(lead);
+                    }}
+                  />
+                </div>
+              )}
 
               {/* Notes */}
               <div>

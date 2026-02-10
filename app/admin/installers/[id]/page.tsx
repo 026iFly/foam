@@ -49,6 +49,8 @@ interface Contract {
   valid_from: string | null;
   valid_to: string | null;
   notes: string | null;
+  draft_pdf_path: string | null;
+  signed_pdf_path: string | null;
   created_at: string;
 }
 
@@ -74,6 +76,15 @@ export default function InstallerDetailPage() {
   const [blockDate, setBlockDate] = useState('');
   const [blockSlot, setBlockSlot] = useState('full');
   const [blockReason, setBlockReason] = useState('');
+
+  // Contract form
+  const [showContractForm, setShowContractForm] = useState(false);
+  const [contractForm, setContractForm] = useState({
+    contract_type: 'employee',
+    valid_from: '',
+    valid_to: '',
+    notes: '',
+  });
 
   const fetchData = useCallback(async () => {
     try {
@@ -153,6 +164,46 @@ export default function InstallerDetailPage() {
     }
   };
 
+  const createContract = async () => {
+    try {
+      await fetch('/api/admin/contracts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          installer_id: installerId,
+          contract_type: contractForm.contract_type,
+          valid_from: contractForm.valid_from || null,
+          valid_to: contractForm.valid_to || null,
+          notes: contractForm.notes || null,
+        }),
+      });
+      setShowContractForm(false);
+      setContractForm({ contract_type: 'employee', valid_from: '', valid_to: '', notes: '' });
+      fetchData();
+    } catch (err) {
+      console.error('Error creating contract:', err);
+    }
+  };
+
+  const uploadSignedContract = async (contractId: number, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch(`/api/admin/contracts/${contractId}/upload-signed`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (res.ok) {
+        fetchData();
+      } else {
+        const data = await res.json();
+        alert(`Fel: ${data.error || 'Kunde inte ladda upp'}`);
+      }
+    } catch (err) {
+      console.error('Error uploading signed contract:', err);
+    }
+  };
+
   const formatSlot = (slot: string) => {
     if (slot === 'morning') return 'Förmiddag';
     if (slot === 'afternoon') return 'Eftermiddag';
@@ -184,7 +235,7 @@ export default function InstallerDetailPage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="flex items-center gap-4 mb-6">
-        <Link href="/admin/installers" className="text-gray-500 hover:text-gray-700">
+        <Link href="/admin/installers" className="text-gray-600 hover:text-gray-800">
           &larr; Tillbaka
         </Link>
         <h1 className="text-2xl font-bold text-gray-900">
@@ -310,8 +361,8 @@ export default function InstallerDetailPage() {
                       weekday: 'short', day: 'numeric', month: 'short',
                     })}
                   </span>
-                  <span className="text-gray-500 ml-2">{formatSlot(bd.slot)}</span>
-                  {bd.reason && <span className="text-gray-500 ml-2">- {bd.reason}</span>}
+                  <span className="text-gray-600 ml-2">{formatSlot(bd.slot)}</span>
+                  {bd.reason && <span className="text-gray-600 ml-2">- {bd.reason}</span>}
                 </div>
                 <button
                   onClick={() => removeBlockedDate(bd.id)}
@@ -323,7 +374,7 @@ export default function InstallerDetailPage() {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-500">Inga blockerade datum.</p>
+          <p className="text-sm text-gray-600">Inga blockerade datum.</p>
         )}
       </div>
 
@@ -339,7 +390,7 @@ export default function InstallerDetailPage() {
                     {new Date(a.booking.scheduled_date).toLocaleDateString('sv-SE')}
                   </span>
                   <span className="ml-2">{a.booking.quote_requests?.customer_name || '-'}</span>
-                  <span className="ml-2 text-gray-500">{a.booking.quote_requests?.customer_address || ''}</span>
+                  <span className="ml-2 text-gray-600">{a.booking.quote_requests?.customer_address || ''}</span>
                   {a.is_lead && (
                     <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-1 rounded">Ansvarig</span>
                   )}
@@ -355,41 +406,146 @@ export default function InstallerDetailPage() {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-500">Inga tilldelade bokningar.</p>
+          <p className="text-sm text-gray-600">Inga tilldelade bokningar.</p>
         )}
       </div>
 
       {/* Contracts Section */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Avtal</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Avtal</h2>
+          <button
+            onClick={() => setShowContractForm(true)}
+            className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700"
+          >
+            Skapa avtal
+          </button>
+        </div>
+
+        {/* Create Contract Form */}
+        {showContractForm && (
+          <div className="border border-gray-200 rounded p-4 mb-4 space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Avtalstyp</label>
+                <select
+                  value={contractForm.contract_type}
+                  onChange={(e) => setContractForm({ ...contractForm, contract_type: e.target.value })}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                >
+                  <option value="employee">Anställningsavtal</option>
+                  <option value="subcontractor">Underentreprenadavtal</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Giltigt från</label>
+                <input
+                  type="date"
+                  value={contractForm.valid_from}
+                  onChange={(e) => setContractForm({ ...contractForm, valid_from: e.target.value })}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Giltigt till (valfritt)</label>
+                <input
+                  type="date"
+                  value={contractForm.valid_to}
+                  onChange={(e) => setContractForm({ ...contractForm, valid_to: e.target.value })}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Anteckningar</label>
+                <input
+                  type="text"
+                  value={contractForm.notes}
+                  onChange={(e) => setContractForm({ ...contractForm, notes: e.target.value })}
+                  placeholder="Valfria anteckningar"
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setShowContractForm(false)}
+                className="px-3 py-1.5 text-sm text-gray-700 hover:text-gray-900"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={createContract}
+                className="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700"
+              >
+                Skapa
+              </button>
+            </div>
+          </div>
+        )}
+
         {contracts.length > 0 ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {contracts.map((c) => (
-              <div key={c.id} className="flex items-center justify-between bg-gray-50 rounded px-3 py-2">
-                <div className="text-sm">
-                  <span className="font-medium">
-                    {c.contract_type === 'employee' ? 'Anställningsavtal' : 'Underentreprenadavtal'}
-                  </span>
-                  {c.valid_from && (
-                    <span className="ml-2 text-gray-500">
-                      {new Date(c.valid_from).toLocaleDateString('sv-SE')}
-                      {c.valid_to && ` - ${new Date(c.valid_to).toLocaleDateString('sv-SE')}`}
+              <div key={c.id} className="border border-gray-200 rounded p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-sm">
+                    <span className="font-medium">
+                      {c.contract_type === 'employee' ? 'Anställningsavtal' : 'Underentreprenadavtal'}
                     </span>
+                    {c.valid_from && (
+                      <span className="ml-2 text-gray-600">
+                        {new Date(c.valid_from).toLocaleDateString('sv-SE')}
+                        {c.valid_to && ` - ${new Date(c.valid_to).toLocaleDateString('sv-SE')}`}
+                      </span>
+                    )}
+                  </div>
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    c.status === 'signed' ? 'bg-green-100 text-green-800'
+                      : c.status === 'sent' ? 'bg-blue-100 text-blue-800'
+                      : c.status === 'expired' ? 'bg-red-100 text-red-800'
+                      : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {c.status === 'signed' ? 'Signerat' : c.status === 'sent' ? 'Skickat' : c.status === 'expired' ? 'Utgånget' : 'Utkast'}
+                  </span>
+                </div>
+                {c.notes && <p className="text-sm text-gray-600 mb-2">{c.notes}</p>}
+                <div className="flex gap-2 flex-wrap">
+                  {c.draft_pdf_path && (
+                    <a
+                      href={`/api/admin/contracts/${c.id}/download?type=draft`}
+                      className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded hover:bg-blue-100"
+                    >
+                      Ladda ner utkast
+                    </a>
+                  )}
+                  {c.signed_pdf_path && (
+                    <a
+                      href={`/api/admin/contracts/${c.id}/download?type=signed`}
+                      className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded hover:bg-green-100"
+                    >
+                      Ladda ner signerat
+                    </a>
+                  )}
+                  {c.status !== 'signed' && (
+                    <label className="text-xs bg-yellow-50 text-yellow-700 px-2 py-1 rounded hover:bg-yellow-100 cursor-pointer">
+                      Ladda upp signerat PDF
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) uploadSignedContract(c.id, file);
+                        }}
+                      />
+                    </label>
                   )}
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-full ${
-                  c.status === 'signed' ? 'bg-green-100 text-green-800'
-                    : c.status === 'sent' ? 'bg-blue-100 text-blue-800'
-                    : c.status === 'expired' ? 'bg-red-100 text-red-800'
-                    : 'bg-gray-100 text-gray-600'
-                }`}>
-                  {c.status === 'signed' ? 'Signerat' : c.status === 'sent' ? 'Skickat' : c.status === 'expired' ? 'Utgånget' : 'Utkast'}
-                </span>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-500">Inga avtal.</p>
+          <p className="text-sm text-gray-600">Inga avtal.</p>
         )}
       </div>
     </div>

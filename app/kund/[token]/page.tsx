@@ -78,7 +78,7 @@ export default function CustomerVerifyPage() {
           </button>
         </form>
 
-        <p className="text-xs text-gray-400 text-center mt-6">
+        <p className="text-xs text-gray-600 text-center mt-6">
           Har du frågor? Kontakta oss på 010 703 74 00
         </p>
       </div>

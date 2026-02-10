@@ -80,7 +80,7 @@ export default function ConfirmPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-pulse text-gray-500">Laddar...</div>
+        <div className="animate-pulse text-gray-600">Laddar...</div>
       </div>
     );
   }
@@ -120,15 +120,15 @@ export default function ConfirmPage() {
 
             <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Kund</span>
+                <span className="text-sm text-gray-600">Kund</span>
                 <span className="text-sm font-medium">{data.booking.customer_name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Adress</span>
+                <span className="text-sm text-gray-600">Adress</span>
                 <span className="text-sm font-medium">{data.booking.customer_address}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Datum</span>
+                <span className="text-sm text-gray-600">Datum</span>
                 <span className="text-sm font-medium">
                   {new Date(data.booking.scheduled_date).toLocaleDateString('sv-SE', {
                     weekday: 'long', day: 'numeric', month: 'long',
@@ -136,7 +136,7 @@ export default function ConfirmPage() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Tid</span>
+                <span className="text-sm text-gray-600">Tid</span>
                 <span className="text-sm font-medium">{data.booking.slot_type}</span>
               </div>
             </div>

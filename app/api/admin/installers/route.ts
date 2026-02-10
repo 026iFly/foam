@@ -12,7 +12,7 @@ export async function GET() {
     const { data: installers, error } = await supabaseAdmin
       .from('user_profiles')
       .select('*')
-      .eq('role', 'installer')
+      .not('installer_type', 'is', null)
       .order('priority_order', { ascending: true })
       .order('first_name', { ascending: true });
 

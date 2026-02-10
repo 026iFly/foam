@@ -123,7 +123,7 @@ export async function getAllAvailability(
   const { data: installers } = await supabaseAdmin
     .from('user_profiles')
     .select('*')
-    .eq('role', 'installer')
+    .not('installer_type', 'is', null)
     .eq('is_active', true)
     .order('priority_order', { ascending: true });
 
@@ -220,7 +220,7 @@ export async function getAvailableInstallers(
   const { data: installers } = await supabaseAdmin
     .from('user_profiles')
     .select('*')
-    .eq('role', 'installer')
+    .not('installer_type', 'is', null)
     .eq('is_active', true)
     .order('priority_order', { ascending: true });
 

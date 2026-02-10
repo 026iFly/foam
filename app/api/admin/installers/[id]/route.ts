@@ -18,7 +18,7 @@ export async function GET(
       .from('user_profiles')
       .select('*')
       .eq('id', id)
-      .eq('role', 'installer')
+      .not('installer_type', 'is', null)
       .single();
 
     if (error) {
@@ -96,7 +96,7 @@ export async function PUT(
       .from('user_profiles')
       .update(updateData)
       .eq('id', id)
-      .eq('role', 'installer')
+      .not('installer_type', 'is', null)
       .select()
       .single();
 

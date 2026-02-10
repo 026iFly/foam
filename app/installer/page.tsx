@@ -136,7 +136,7 @@ export default function InstallerDashboard() {
                               weekday: 'short', day: 'numeric', month: 'short',
                             })}
                           </p>
-                          <p className="text-xs text-gray-500">{formatSlot(booking.slot_type)}</p>
+                          <p className="text-xs text-gray-600">{formatSlot(booking.slot_type)}</p>
                         </>
                       )}
                     </div>
@@ -173,7 +173,7 @@ export default function InstallerDashboard() {
                   <div>
                     <p className="text-sm font-medium text-gray-900">{task.title}</p>
                     {task.description && (
-                      <p className="text-xs text-gray-500 mt-0.5">{task.description}</p>
+                      <p className="text-xs text-gray-600 mt-0.5">{task.description}</p>
                     )}
                   </div>
                   <span className={`text-xs px-2 py-1 rounded-full ${
@@ -192,7 +192,7 @@ export default function InstallerDashboard() {
 
       {confirmationTasks.length === 0 && otherTasks.length === 0 && (
         <div className="bg-white rounded-lg shadow p-8 text-center">
-          <p className="text-gray-500">Inga uppgifter just nu.</p>
+          <p className="text-gray-600">Inga uppgifter just nu.</p>
         </div>
       )}
     </div>

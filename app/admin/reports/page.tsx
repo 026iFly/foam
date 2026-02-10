@@ -153,11 +153,11 @@ export default function ReportsPage() {
           <div className="px-6 py-4 border-b bg-gray-50">
             <h2 className="text-lg font-semibold text-gray-900">
               {report.installer.name}
-              <span className="text-sm font-normal text-gray-500 ml-2">
+              <span className="text-sm font-normal text-gray-600 ml-2">
                 {report.installer.type === 'subcontractor' ? 'Underentreprenad' : 'Anställd'}
               </span>
             </h2>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-600">
               {new Date(report.period.from).toLocaleDateString('sv-SE')} - {new Date(report.period.to).toLocaleDateString('sv-SE')}
             </p>
           </div>
@@ -167,14 +167,14 @@ export default function ReportsPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Datum</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kund</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Adress</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Timmar</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Datum</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Kund</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Adress</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 uppercase">Timmar</th>
                     {report.installer.type === 'subcontractor' && (
                       <>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Timpris</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Belopp</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 uppercase">Timpris</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 uppercase">Belopp</th>
                       </>
                     )}
                   </tr>
@@ -186,7 +186,7 @@ export default function ReportsPage() {
                         {new Date(row.date).toLocaleDateString('sv-SE')}
                       </td>
                       <td className="px-4 py-3 text-sm">{row.customer_name}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{row.customer_address}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{row.customer_address}</td>
                       <td className="px-4 py-3 text-sm text-right">{row.hours}h</td>
                       {report.installer.type === 'subcontractor' && (
                         <>
@@ -205,17 +205,17 @@ export default function ReportsPage() {
                   <span className="text-sm font-semibold text-gray-900">Totalt</span>
                   <div className="text-right">
                     <p className="text-sm">
-                      <span className="text-gray-500">Timmar:</span>{' '}
+                      <span className="text-gray-600">Timmar:</span>{' '}
                       <span className="font-semibold">{report.totals.hours}h</span>
                     </p>
                     {report.installer.type === 'subcontractor' && (
                       <>
                         <p className="text-sm">
-                          <span className="text-gray-500">Exkl moms:</span>{' '}
+                          <span className="text-gray-600">Exkl moms:</span>{' '}
                           <span className="font-semibold">{formatCurrency(report.totals.amount)}</span>
                         </p>
                         <p className="text-sm">
-                          <span className="text-gray-500">Inkl moms:</span>{' '}
+                          <span className="text-gray-600">Inkl moms:</span>{' '}
                           <span className="font-bold">{formatCurrency(report.totals.amount_incl_vat)}</span>
                         </p>
                       </>
@@ -225,7 +225,7 @@ export default function ReportsPage() {
               </div>
             </>
           ) : (
-            <div className="px-6 py-8 text-center text-gray-500">
+            <div className="px-6 py-8 text-center text-gray-600">
               Inga slutförda bokningar för denna period.
             </div>
           )}

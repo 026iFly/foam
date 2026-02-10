@@ -144,8 +144,8 @@ export default function InstallerProfilePage() {
                       weekday: 'short', day: 'numeric', month: 'short',
                     })}
                   </span>
-                  <span className="text-gray-500 ml-2">{formatSlot(bd.slot)}</span>
-                  {bd.reason && <span className="text-gray-500 ml-2">- {bd.reason}</span>}
+                  <span className="text-gray-600 ml-2">{formatSlot(bd.slot)}</span>
+                  {bd.reason && <span className="text-gray-600 ml-2">- {bd.reason}</span>}
                 </div>
                 <button
                   onClick={() => removeBlockedDate(bd.id)}
@@ -157,14 +157,14 @@ export default function InstallerProfilePage() {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-500">Inga blockerade datum.</p>
+          <p className="text-sm text-gray-600">Inga blockerade datum.</p>
         )}
       </div>
 
       {/* Info - read only */}
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Information</h2>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-600">
           Kontakta administratören för att uppdatera dina kontaktuppgifter, timpris eller certifikat.
         </p>
       </div>
