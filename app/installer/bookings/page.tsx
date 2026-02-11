@@ -80,9 +80,9 @@ export default function InstallerBookingsPage() {
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="font-medium text-gray-900">{quoteData?.customer_name || '-'}</p>
-                    <p className="text-sm text-gray-600">{quoteData?.customer_address || ''}</p>
+                    <p className="text-sm text-gray-700">{quoteData?.customer_address || ''}</p>
                     {booking && (
-                      <p className="text-sm text-gray-600 mt-1">
+                      <p className="text-sm text-gray-700 mt-1">
                         {formatSlot(booking.slot_type)}
                       </p>
                     )}

@@ -248,7 +248,7 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">Laddar dashboard...</div>
+        <div className="text-gray-700">Laddar dashboard...</div>
       </div>
     );
   }
@@ -263,19 +263,19 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             <div className="bg-white rounded-lg shadow p-6">
               <div className="text-3xl font-bold text-yellow-600">{counts?.pending || 0}</div>
-              <div className="text-sm text-gray-600">Nya förfrågningar</div>
+              <div className="text-sm text-gray-700">Nya förfrågningar</div>
             </div>
             <div className="bg-white rounded-lg shadow p-6">
               <div className="text-3xl font-bold text-indigo-600">{counts?.sent || 0}</div>
-              <div className="text-sm text-gray-600">Skickade offerter</div>
+              <div className="text-sm text-gray-700">Skickade offerter</div>
             </div>
             <div className="bg-white rounded-lg shadow p-6">
               <div className="text-3xl font-bold text-green-600">{counts?.accepted || 0}</div>
-              <div className="text-sm text-gray-600">Accepterade</div>
+              <div className="text-sm text-gray-700">Accepterade</div>
             </div>
             <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-3xl font-bold text-gray-600">{counts?.all || 0}</div>
-              <div className="text-sm text-gray-600">Totalt</div>
+              <div className="text-3xl font-bold text-gray-800">{counts?.all || 0}</div>
+              <div className="text-sm text-gray-700">Totalt</div>
             </div>
           </div>
 
@@ -296,7 +296,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="divide-y divide-gray-100">
                   {todos.length === 0 ? (
-                    <div className="p-6 text-center text-gray-500">
+                    <div className="p-6 text-center text-gray-700">
                       <p>Inga uppgifter just nu.</p>
                       <button
                         onClick={syncTasks}
@@ -323,7 +323,7 @@ export default function AdminDashboard() {
                           className="flex-1 min-w-0"
                         >
                           <div className="font-medium text-gray-800">{todo.title}</div>
-                          <div className="text-sm text-gray-500 truncate">{todo.description}</div>
+                          <div className="text-sm text-gray-700 truncate">{todo.description}</div>
                         </Link>
                       </div>
                     ))
@@ -354,7 +354,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="divide-y divide-gray-100">
                   {recentQuotes.length === 0 ? (
-                    <div className="p-6 text-center text-gray-500">
+                    <div className="p-6 text-center text-gray-700">
                       Inga offertförfrågningar ännu.
                     </div>
                   ) : (
@@ -367,7 +367,7 @@ export default function AdminDashboard() {
                         <div className="flex justify-between items-start">
                           <div>
                             <div className="font-medium text-gray-800">{quote.customer_name}</div>
-                            <div className="text-sm text-gray-500">{quote.customer_address}</div>
+                            <div className="text-sm text-gray-700">{quote.customer_address}</div>
                           </div>
                           <div className="text-right">
                             <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusColor(quote.status)}`}>
@@ -378,7 +378,7 @@ export default function AdminDashboard() {
                             </div>
                           </div>
                         </div>
-                        <div className="text-xs text-gray-400 mt-2">
+                        <div className="text-xs text-gray-700 mt-2">
                           {formatDate(quote.created_at)}
                         </div>
                       </Link>
@@ -428,7 +428,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="p-4">
                   {stockLevels.length === 0 ? (
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-gray-700">
                       Lagerdata inte tillgänglig. Kör databasen migreringen.
                     </div>
                   ) : (
@@ -437,15 +437,15 @@ export default function AdminDashboard() {
                         <div key={stock.id} className="space-y-1">
                           <div className="flex justify-between text-sm">
                             <span className="font-medium text-gray-700">{stock.name}</span>
-                            <span className={stock.is_low ? 'text-red-600 font-bold' : 'text-gray-600'}>
+                            <span className={stock.is_low ? 'text-red-600 font-bold' : 'text-gray-900'}>
                               {stock.current_stock} {stock.unit}
                             </span>
                           </div>
-                          <div className={`text-xs ${stock.low_in_7_days ? 'text-orange-600 font-medium' : 'text-gray-500'}`}>
+                          <div className={`text-xs ${stock.low_in_7_days ? 'text-orange-600 font-medium' : 'text-gray-700'}`}>
                             Om 7d: {stock.stock_in_7_days} {stock.unit}
                             {stock.confirmed_7_days > 0 && ` (${stock.confirmed_7_days} ${stock.unit} bokade)`}
                           </div>
-                          <div className={`text-xs ${stock.low_in_30_days ? 'text-orange-600 font-medium' : 'text-gray-500'}`}>
+                          <div className={`text-xs ${stock.low_in_30_days ? 'text-orange-600 font-medium' : 'text-gray-700'}`}>
                             Om 30d: {stock.stock_in_30_days} {stock.unit}
                             {stock.projected_from_quotes > 0 && ` (inkl. ~${stock.projected_from_quotes} ${stock.unit} från offerter)`}
                           </div>
@@ -460,7 +460,7 @@ export default function AdminDashboard() {
                   )}
                 </div>
                 {materialProjections && (materialProjections.closedCellKg > 0 || materialProjections.openCellKg > 0) && (
-                  <div className="px-4 pb-3 text-xs text-gray-400">
+                  <div className="px-4 pb-3 text-xs text-gray-700">
                     Prognos: {Math.round(materialProjections.conversionRates.signed * 100)}% signerade, {Math.round(materialProjections.conversionRates.sent * 100)}% skickade, {Math.round(materialProjections.conversionRates.pending * 100)}% nya
                   </div>
                 )}
@@ -482,9 +482,9 @@ export default function AdminDashboard() {
                     <div className="text-2xl font-bold text-green-600">
                       {formatCurrency(projectedRevenue)}
                     </div>
-                    <div className="text-sm text-gray-500">Projicerade intäkter</div>
+                    <div className="text-sm text-gray-700">Projicerade intäkter</div>
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-gray-700">
                     Baserat på konverteringsgrader: 100% accepterade, 50% skickade, 10% nya
                   </div>
                 </div>
@@ -497,7 +497,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="p-4">
                   {upcomingBookings.length === 0 ? (
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-gray-700">
                       Inga bokade besök eller installationer.
                     </div>
                   ) : (
@@ -514,9 +514,9 @@ export default function AdminDashboard() {
                             <div className="font-medium text-gray-700">
                               {booking.booking_type === 'installation' ? 'Installation' : 'Hembesök'}
                             </div>
-                            <div className="text-gray-500">{booking.customer_name}</div>
+                            <div className="text-gray-700">{booking.customer_name}</div>
                           </div>
-                          <div className="text-gray-500">
+                          <div className="text-gray-700">
                             {formatDate(booking.scheduled_date)}
                           </div>
                         </div>

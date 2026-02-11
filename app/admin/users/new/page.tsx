@@ -33,14 +33,14 @@ export default function NewUserPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Kunde inte bjuda in anvandare');
+        setError(data.error || 'Kunde inte bjuda in användare');
         setSaving(false);
         return;
       }
 
       router.push('/admin/users');
     } catch (err) {
-      setError('Nagot gick fel');
+      setError('Något gick fel');
       setSaving(false);
     }
   };
@@ -54,12 +54,12 @@ export default function NewUserPage() {
               href="/admin/users"
               className="text-blue-600 hover:text-blue-800"
             >
-              Tillbaka till anvandare
+              Tillbaka till användare
             </Link>
           </div>
 
           <h1 className="text-3xl font-bold text-gray-800 mb-8">
-            Bjud in ny anvandare
+            Bjud in ny användare
           </h1>
 
           {error && (
@@ -83,7 +83,7 @@ export default function NewUserPage() {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
                     placeholder="namn@foretag.se"
                   />
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-gray-700 mt-1">
                     En inbjudan skickas till denna adress
                   </p>
                 </div>
@@ -91,7 +91,7 @@ export default function NewUserPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Fornamn
+                      Förnamn
                     </label>
                     <input
                       type="text"
@@ -122,11 +122,11 @@ export default function NewUserPage() {
                     onChange={(e) => setRole(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
                   >
-                    <option value="installer">Installator</option>
+                    <option value="installer">Installatör</option>
                     <option value="admin">Admin</option>
                   </select>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Admins kan hantera anvandare och alla installningar
+                  <p className="text-sm text-gray-700 mt-1">
+                    Admins kan hantera användare och alla inställningar
                   </p>
                 </div>
               </div>

@@ -50,7 +50,7 @@ export default function ProfilePage() {
         }
       }
     } catch (err) {
-      setError('Kunde inte hamta profil');
+      setError('Kunde inte hämta profil');
     } finally {
       setLoading(false);
     }
@@ -72,12 +72,12 @@ export default function ProfilePage() {
       // Handle password change
       if (newPassword) {
         if (newPassword !== confirmPassword) {
-          setError('Losenorden matchar inte');
+          setError('Lösenorden matchar inte');
           setSaving(false);
           return;
         }
         if (newPassword.length < 6) {
-          setError('Losenordet maste vara minst 6 tecken');
+          setError('Lösenordet måste vara minst 6 tecken');
           setSaving(false);
           return;
         }
@@ -105,7 +105,7 @@ export default function ProfilePage() {
       setConfirmPassword('');
       router.refresh();
     } catch (err) {
-      setError('Nagot gick fel');
+      setError('Något gick fel');
     } finally {
       setSaving(false);
     }
@@ -242,15 +242,15 @@ export default function ProfilePage() {
                     disabled
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700"
                   />
-                  <p className="text-sm text-gray-500 mt-1">
-                    E-postadressen kan inte andras
+                  <p className="text-sm text-gray-700 mt-1">
+                    E-postadressen kan inte ändras
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Fornamn
+                      Förnamn
                     </label>
                     <input
                       type="text"
@@ -288,11 +288,11 @@ export default function ProfilePage() {
 
             {/* Password Change */}
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <h2 className="text-xl font-semibold mb-4 text-gray-900">Andra losenord</h2>
+              <h2 className="text-xl font-semibold mb-4 text-gray-900">Ändra lösenord</h2>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nuvarande losenord
+                    Nuvarande lösenord
                   </label>
                   <input
                     type="password"
@@ -303,7 +303,7 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nytt losenord
+                    Nytt lösenord
                   </label>
                   <input
                     type="password"
@@ -314,7 +314,7 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Bekrafta nytt losenord
+                    Bekräfta nytt lösenord
                   </label>
                   <input
                     type="password"
@@ -331,7 +331,7 @@ export default function ProfilePage() {
               disabled={saving}
               className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:bg-gray-400"
             >
-              {saving ? 'Sparar...' : 'Spara andringar'}
+              {saving ? 'Sparar...' : 'Spara ändringar'}
             </button>
           </form>
         </div>

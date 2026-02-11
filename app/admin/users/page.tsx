@@ -29,13 +29,13 @@ export default function UsersPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Kunde inte hamta anvandare');
+        setError(data.error || 'Kunde inte hämta användare');
         return;
       }
 
       setUsers(data.users || []);
     } catch (err) {
-      setError('Nagot gick fel');
+      setError('Något gick fel');
     } finally {
       setLoading(false);
     }
@@ -54,12 +54,12 @@ export default function UsersPage() {
       <div className="container mx-auto px-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800">Anvandare</h1>
+            <h1 className="text-3xl font-bold text-gray-800">Användare</h1>
             <Link
               href="/admin/users/new"
               className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
             >
-              Bjud in anvandare
+              Bjud in användare
             </Link>
           </div>
 
@@ -74,7 +74,7 @@ export default function UsersPage() {
               <thead className="bg-gray-50 border-b">
                 <tr>
                   <th className="text-left px-6 py-3 text-sm font-medium text-gray-700">
-                    Anvandare
+                    Användare
                   </th>
                   <th className="text-left px-6 py-3 text-sm font-medium text-gray-700">
                     Roll
@@ -83,7 +83,7 @@ export default function UsersPage() {
                     Skapad
                   </th>
                   <th className="text-right px-6 py-3 text-sm font-medium text-gray-700">
-                    Atgarder
+                    Åtgärder
                   </th>
                 </tr>
               </thead>
@@ -111,7 +111,7 @@ export default function UsersPage() {
                               ? `${user.first_name} ${user.last_name}`
                               : user.email}
                           </div>
-                          <div className="text-sm text-gray-500">{user.email}</div>
+                          <div className="text-sm text-gray-700">{user.email}</div>
                         </div>
                       </div>
                     </td>
@@ -126,7 +126,7 @@ export default function UsersPage() {
                         {user.role === 'admin' ? 'Admin' : 'Installatör'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
+                    <td className="px-6 py-4 text-sm text-gray-700">
                       {new Date(user.created_at).toLocaleDateString('sv-SE')}
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -141,8 +141,8 @@ export default function UsersPage() {
                 ))}
                 {users.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
-                      Inga anvandare hittades
+                    <td colSpan={4} className="px-6 py-8 text-center text-gray-700">
+                      Inga användare hittades
                     </td>
                   </tr>
                 )}

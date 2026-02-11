@@ -264,7 +264,7 @@ export default function CalendarPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">Laddar kalender...</div>
+        <div className="text-gray-700">Laddar kalender...</div>
       </div>
     );
   }
@@ -309,19 +309,19 @@ export default function CalendarPage() {
             <div className="flex flex-wrap gap-4 text-sm">
               <div className="flex items-center gap-2">
                 <span className="w-4 h-4 bg-blue-50 border-2 border-blue-500 rounded"></span>
-                <span className="text-gray-600">Hembesök</span>
+                <span className="text-gray-700">Hembesök</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-4 h-4 bg-green-50 border-2 border-green-500 rounded"></span>
-                <span className="text-gray-600">Installation</span>
+                <span className="text-gray-700">Installation</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-4 h-4 bg-green-100 border-2 border-green-300 rounded"></span>
-                <span className="text-gray-600">Slutförd</span>
+                <span className="text-gray-700">Slutförd</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-4 h-4 bg-gray-100 border-2 border-gray-300 rounded"></span>
-                <span className="text-gray-600">Avbokad</span>
+                <span className="text-gray-700">Avbokad</span>
               </div>
             </div>
           </div>
@@ -335,7 +335,7 @@ export default function CalendarPage() {
                 </div>
                 <div className="divide-y divide-gray-100">
                   {upcomingDates.length === 0 ? (
-                    <div className="p-6 text-center text-gray-500">
+                    <div className="p-6 text-center text-gray-700">
                       Inga bokade besök eller installationer.
                     </div>
                   ) : (
@@ -480,7 +480,7 @@ export default function CalendarPage() {
                 {/* Weekday Headers */}
                 <div className="grid grid-cols-7 gap-1 mb-2">
                   {['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'].map(day => (
-                    <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
+                    <div key={day} className="text-center text-sm font-medium text-gray-700 py-2">
                       {day}
                     </div>
                   ))}
@@ -566,7 +566,7 @@ export default function CalendarPage() {
                     </button>
                   </div>
                   {getBookingsForDate(selectedDate).length === 0 ? (
-                    <p className="text-gray-500 text-sm">Inga bokningar denna dag.</p>
+                    <p className="text-gray-700 text-sm">Inga bokningar denna dag.</p>
                   ) : (
                     <div className="space-y-2">
                       {getBookingsForDate(selectedDate).map(booking => (

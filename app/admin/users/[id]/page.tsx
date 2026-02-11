@@ -44,7 +44,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Kunde inte hamta anvandare');
+        setError(data.error || 'Kunde inte hämta användare');
         return;
       }
 
@@ -55,7 +55,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
       setRole(data.user.role);
       setInstallerType(data.user.installer_type || null);
     } catch (err) {
-      setError('Nagot gick fel');
+      setError('Något gick fel');
     } finally {
       setLoading(false);
     }
@@ -93,10 +93,10 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
         return;
       }
 
-      setMessage('Anvandaren har sparats');
+      setMessage('Användaren har sparats');
       setNewPassword('');
     } catch (err) {
-      setError('Nagot gick fel');
+      setError('Något gick fel');
     } finally {
       setSaving(false);
     }
@@ -113,14 +113,14 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Kunde inte andra roll');
+        setError(data.error || 'Kunde inte ändra roll');
         return;
       }
 
       setRole(newRole);
-      setMessage('Rollen har andrats');
+      setMessage('Rollen har ändrats');
     } catch (err) {
-      setError('Nagot gick fel');
+      setError('Något gick fel');
     }
   };
 
@@ -135,13 +135,13 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Kunde inte skicka epost');
+        setError(data.error || 'Kunde inte skicka e-post');
         return;
       }
 
-      setMessage('Aterstallningslank har skickats');
+      setMessage('Återställningslänk har skickats');
     } catch (err) {
-      setError('Nagot gick fel');
+      setError('Något gick fel');
     }
   };
 
@@ -159,14 +159,14 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Kunde inte ta bort anvandare');
+        setError(data.error || 'Kunde inte ta bort användare');
         setConfirmDelete(false);
         return;
       }
 
       router.push('/admin/users');
     } catch (err) {
-      setError('Nagot gick fel');
+      setError('Något gick fel');
       setConfirmDelete(false);
     }
   };
@@ -185,13 +185,13 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
         <div className="container mx-auto px-4">
           <div className="max-w-xl mx-auto text-center">
             <h1 className="text-2xl font-bold text-gray-800 mb-4">
-              Anvandaren hittades inte
+              Användaren hittades inte
             </h1>
             <Link
               href="/admin/users"
               className="text-blue-600 hover:text-blue-800"
             >
-              Tillbaka till anvandare
+              Tillbaka till användare
             </Link>
           </div>
         </div>
@@ -208,12 +208,12 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
               href="/admin/users"
               className="text-blue-600 hover:text-blue-800"
             >
-              Tillbaka till anvandare
+              Tillbaka till användare
             </Link>
           </div>
 
           <h1 className="text-3xl font-bold text-gray-800 mb-8">
-            Redigera anvandare
+            Redigera användare
           </h1>
 
           {message && (
@@ -232,7 +232,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
             {/* User Info */}
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
               <h2 className="text-xl font-semibold mb-4 text-gray-900">
-                Anvandarinfo
+                Användarinfo
               </h2>
               <div className="space-y-4">
                 <div>
@@ -250,7 +250,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Fornamn
+                      Förnamn
                     </label>
                     <input
                       type="text"
@@ -299,7 +299,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  Installator
+                  Installatör
                 </button>
                 <button
                   type="button"
@@ -361,19 +361,19 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
             {/* Password */}
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
               <h2 className="text-xl font-semibold mb-4 text-gray-900">
-                Losenord
+                Lösenord
               </h2>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Satt nytt losenord
+                    Sätt nytt lösenord
                   </label>
                   <input
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
-                    placeholder="Lamna tomt for att behalla"
+                    placeholder="Lämna tomt för att behålla"
                   />
                 </div>
                 <div className="text-center">
@@ -384,7 +384,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
                   onClick={handleSendResetEmail}
                   className="w-full bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition"
                 >
-                  Skicka aterstallningslank via e-post
+                  Skicka återställningslänk via e-post
                 </button>
               </div>
             </div>
@@ -395,7 +395,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
               disabled={saving}
               className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:bg-gray-400 mb-6"
             >
-              {saving ? 'Sparar...' : 'Spara andringar'}
+              {saving ? 'Sparar...' : 'Spara ändringar'}
             </button>
           </form>
 
@@ -405,7 +405,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
               Farozon
             </h2>
             <p className="text-red-700 mb-4">
-              Tar bort anvandaren permanent. Detta kan inte angras.
+              Tar bort användaren permanent. Detta kan inte ångras.
             </p>
             <button
               onClick={handleDelete}
@@ -416,8 +416,8 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
               }`}
             >
               {confirmDelete
-                ? 'Klicka igen for att bekrafta'
-                : 'Ta bort anvandare'}
+                ? 'Klicka igen för att bekräfta'
+                : 'Ta bort användare'}
             </button>
             {confirmDelete && (
               <button

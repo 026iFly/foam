@@ -36,7 +36,7 @@ function LoginForm() {
         setError(data.error || 'Inloggning misslyckades');
       }
     } catch (err) {
-      setError('Ett fel uppstod. Forsok igen.');
+      setError('Ett fel uppstod. Försök igen.');
     } finally {
       setLoading(false);
     }
@@ -65,13 +65,13 @@ function LoginForm() {
               Logga in
             </h1>
             <p className="text-gray-700 text-sm">
-              Ange din e-post och losenord for att fortsatta
+              Ange din e-post och lösenord för att fortsätta
             </p>
           </div>
 
           {authError && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
-              Ett fel uppstod. Forsok igen.
+              Ett fel uppstod. Försök igen.
             </div>
           )}
 
@@ -102,7 +102,7 @@ function LoginForm() {
                 htmlFor="password"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Losenord
+                Lösenord
               </label>
               <input
                 id="password"
@@ -146,7 +146,7 @@ function LoginForm() {
 
         {/* Security Notice */}
         <div className="mt-6 text-center text-xs text-gray-700">
-          <p>Endast for behoriga anvandare</p>
+          <p>Endast för behöriga användare</p>
         </div>
       </div>
     </div>

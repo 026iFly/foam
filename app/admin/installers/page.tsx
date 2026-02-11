@@ -127,13 +127,13 @@ export default function InstallersPage() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-10">#</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Namn</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Typ</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Timpris</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hardplast</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bokningar</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 uppercase w-10">#</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Namn</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Typ</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Timpris</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Hardplast</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Bokningar</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Status</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>

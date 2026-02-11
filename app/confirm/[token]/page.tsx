@@ -80,7 +80,7 @@ export default function ConfirmPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-pulse text-gray-600">Laddar...</div>
+        <div className="animate-pulse text-gray-700">Laddar...</div>
       </div>
     );
   }
@@ -102,7 +102,7 @@ export default function ConfirmPage() {
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
         <div className="text-center mb-6">
           <h1 className="text-xl font-bold text-gray-900">Intellifoam</h1>
-          <p className="text-gray-600 mt-1">Bekräfta bokning</p>
+          <p className="text-gray-700 mt-1">Bekräfta bokning</p>
         </div>
 
         {responded ? (
@@ -114,7 +114,7 @@ export default function ConfirmPage() {
           </div>
         ) : (
           <>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-gray-700 mb-4">
               Hej {data.installer_name}! Du har blivit tilldelad en ny installation.
             </p>
 

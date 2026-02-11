@@ -281,7 +281,7 @@ export default function InventoryPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">Laddar lager...</div>
+        <div className="text-gray-700">Laddar lager...</div>
       </div>
     );
   }
@@ -305,7 +305,7 @@ export default function InventoryPage() {
             </div>
             <div className="p-6">
               {materials.length === 0 ? (
-                <div className="text-gray-500 text-center py-8">
+                <div className="text-gray-700 text-center py-8">
                   Inga material hittades. Kör databasen migreringen först.
                 </div>
               ) : (
@@ -321,7 +321,7 @@ export default function InventoryPage() {
                         <div>
                           <h3 className="font-semibold text-gray-800">{material.name}</h3>
                           {material.sku && (
-                            <div className="text-sm text-gray-500">SKU: {material.sku}</div>
+                            <div className="text-sm text-gray-700">SKU: {material.sku}</div>
                           )}
                         </div>
                         <div className="text-right">
@@ -339,25 +339,25 @@ export default function InventoryPage() {
                       {/* Projections */}
                       <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
                         <div className="bg-gray-50 rounded p-3">
-                          <div className="text-gray-500">Om 7 dagar</div>
+                          <div className="text-gray-700">Om 7 dagar</div>
                           <div className={`font-semibold ${material.stock_in_7_days < 0 ? 'text-red-600' : 'text-gray-800'}`}>
                             {material.stock_in_7_days} {material.unit}
                           </div>
-                          <div className="text-xs text-gray-400">
+                          <div className="text-xs text-gray-700">
                             -{material.reserved_7_days} bokat, +{material.incoming_7_days} leverans
                           </div>
                         </div>
                         <div className="bg-gray-50 rounded p-3">
-                          <div className="text-gray-500">Om 30 dagar</div>
+                          <div className="text-gray-700">Om 30 dagar</div>
                           <div className={`font-semibold ${material.stock_in_30_days < 0 ? 'text-red-600' : 'text-gray-800'}`}>
                             {material.stock_in_30_days} {material.unit}
                           </div>
-                          <div className="text-xs text-gray-400">
+                          <div className="text-xs text-gray-700">
                             -{material.reserved_30_days} bokat, +{material.incoming_30_days} leverans
                           </div>
                         </div>
                         <div className="bg-gray-50 rounded p-3">
-                          <div className="text-gray-500">Minimigräns</div>
+                          <div className="text-gray-700">Minimigräns</div>
                           <input
                             type="number"
                             defaultValue={material.minimum_stock}
@@ -376,7 +376,7 @@ export default function InventoryPage() {
                       {adjusting === material.id ? (
                         <div className="flex gap-2 items-end">
                           <div className="flex-1">
-                            <label className="block text-sm text-gray-600 mb-1">Justera lager</label>
+                            <label className="block text-sm text-gray-700 mb-1">Justera lager</label>
                             <input
                               type="number"
                               value={adjustAmount}
@@ -386,7 +386,7 @@ export default function InventoryPage() {
                             />
                           </div>
                           <div className="flex-1">
-                            <label className="block text-sm text-gray-600 mb-1">Anteckning</label>
+                            <label className="block text-sm text-gray-700 mb-1">Anteckning</label>
                             <input
                               type="text"
                               value={adjustNotes}
@@ -440,7 +440,7 @@ export default function InventoryPage() {
             </div>
             <div className="p-6">
               {shipments.length === 0 ? (
-                <div className="text-gray-500 text-center py-4">
+                <div className="text-gray-700 text-center py-4">
                   Inga väntande leveranser.
                 </div>
               ) : (
@@ -454,7 +454,7 @@ export default function InventoryPage() {
                         <div>
                           <div className="font-medium text-gray-800">{shipment.supplier || 'Okänd leverantör'}</div>
                           {shipment.order_number && (
-                            <div className="text-sm text-gray-500">Order: {shipment.order_number}</div>
+                            <div className="text-sm text-gray-700">Order: {shipment.order_number}</div>
                           )}
                           {/* Shipment items */}
                           {shipment.shipment_items && shipment.shipment_items.length > 0 && (
@@ -471,7 +471,7 @@ export default function InventoryPage() {
                           <div className="text-gray-800">
                             {new Date(shipment.expected_date).toLocaleDateString('sv-SE')}
                           </div>
-                          <div className="text-sm text-gray-500 capitalize mb-2">{shipment.status}</div>
+                          <div className="text-sm text-gray-700 capitalize mb-2">{shipment.status}</div>
                           {shipment.status !== 'received' && (
                             <div className="flex gap-2 justify-end">
                               <button
