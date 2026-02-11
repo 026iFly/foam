@@ -34,6 +34,9 @@ export default async function InstallerLayout({
                 <Link href="/installer/bookings" className="text-sm text-gray-600 hover:text-gray-900">
                   Bokningar
                 </Link>
+                <Link href="/installer/calendar" className="text-sm text-gray-600 hover:text-gray-900">
+                  Kalender
+                </Link>
                 <Link href="/installer/profile" className="text-sm text-gray-600 hover:text-gray-900">
                   Min profil
                 </Link>
@@ -55,6 +58,7 @@ export default async function InstallerLayout({
         <nav className="flex items-center gap-4">
           <Link href="/installer" className="text-sm text-gray-600 hover:text-gray-900">Dashboard</Link>
           <Link href="/installer/bookings" className="text-sm text-gray-600 hover:text-gray-900">Bokningar</Link>
+          <Link href="/installer/calendar" className="text-sm text-gray-600 hover:text-gray-900">Kalender</Link>
           <Link href="/installer/profile" className="text-sm text-gray-600 hover:text-gray-900">Profil</Link>
         </nav>
       </div>

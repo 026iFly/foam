@@ -6,8 +6,8 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { getAvailableInstallers } from '@/lib/installer-availability';
-import { sendInstallerConfirmationEmail } from '@/lib/email';
-import { sendDiscordNotification } from '@/lib/discord';
+import { sendInstallerConfirmationEmail, sendBookingConfirmationEmail } from '@/lib/email';
+import { sendDiscordNotification, notifyInstallationBooked } from '@/lib/discord';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -77,7 +77,7 @@ export async function autoAssignInstallers(bookingId: number): Promise<AutoAssig
       }, { onConflict: 'booking_id,installer_id' });
 
     // Send confirmation requests via all channels
-    await sendConfirmationRequests(bookingId, inst.installerId, {
+    await sendInstallerNotifications(bookingId, inst.installerId, {
       customer_name: quoteData?.customer_name || '',
       customer_address: quoteData?.customer_address || '',
       installation_date: booking.scheduled_date,
@@ -111,8 +111,9 @@ export async function autoAssignInstallers(bookingId: number): Promise<AutoAssig
 
 /**
  * Send confirmation requests to an installer via all channels
+ * Exported as sendInstallerNotifications for use from booking creation
  */
-async function sendConfirmationRequests(
+export async function sendInstallerNotifications(
   bookingId: number,
   installerId: string,
   bookingInfo: {
@@ -278,7 +279,7 @@ export async function handleInstallerDecline(
     });
 
   // Send confirmation requests
-  await sendConfirmationRequests(bookingId, nextAvailable.installerId, {
+  await sendInstallerNotifications(bookingId, nextAvailable.installerId, {
     customer_name: quoteData?.customer_name || '',
     customer_address: quoteData?.customer_address || '',
     installation_date: booking.scheduled_date,
@@ -331,6 +332,41 @@ export async function handleInstallerAccept(
       .from('bookings')
       .update({ status: 'confirmed' })
       .eq('id', bookingId);
+
+    // Send customer confirmation email + Discord notification
+    const { data: booking } = await supabaseAdmin
+      .from('bookings')
+      .select(`
+        scheduled_date,
+        quote_requests (customer_name, customer_email, customer_address)
+      `)
+      .eq('id', bookingId)
+      .single();
+
+    if (booking) {
+      const quoteData = booking.quote_requests as unknown as {
+        customer_name: string;
+        customer_email: string;
+        customer_address: string;
+      } | null;
+
+      if (quoteData?.customer_email) {
+        sendBookingConfirmationEmail({
+          customer_name: quoteData.customer_name,
+          customer_email: quoteData.customer_email,
+          customer_address: quoteData.customer_address,
+          installation_date: booking.scheduled_date,
+        }).catch(console.error);
+      }
+
+      if (quoteData) {
+        notifyInstallationBooked({
+          customer_name: quoteData.customer_name,
+          customer_address: quoteData.customer_address,
+          scheduled_date: booking.scheduled_date,
+        }).catch(console.error);
+      }
+    }
   }
 }
 

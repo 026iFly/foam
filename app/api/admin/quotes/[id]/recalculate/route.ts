@@ -312,9 +312,34 @@ export async function POST(
     const vat = Math.round(totalExclVat * 0.25);
     const totalInclVat = totalExclVat + vat;
 
-    // ROT deduction (30% of labor cost incl VAT)
+    // ROT deduction (30% of labor cost incl VAT, capped per person)
     const laborCostInclVat = totalLaborCost * 1.25;
-    const rotDeduction = options.applyRotDeduction ? Math.round(laborCostInclVat * 0.30) : 0;
+    const rawRot = Math.round(laborCostInclVat * 0.30);
+
+    let rotDeduction = 0;
+    if (options.applyRotDeduction) {
+      const rotMaxPerPerson = quote.rot_max_per_person || 50000;
+      const customerMax = quote.rot_customer_max
+        ? (typeof quote.rot_customer_max === 'string' ? JSON.parse(quote.rot_customer_max) : quote.rot_customer_max)
+        : null;
+      const rotInfoRaw = quote.rot_customer_info
+        ? (typeof quote.rot_customer_info === 'string' ? JSON.parse(quote.rot_customer_info) : quote.rot_customer_info)
+        : null;
+
+      if (rotInfoRaw?.customers?.length) {
+        // Sum each person's cap * their share
+        let totalMaxRot = 0;
+        for (let i = 0; i < rotInfoRaw.customers.length; i++) {
+          const personMax = customerMax?.[String(i)] ?? rotMaxPerPerson;
+          const share = rotInfoRaw.customers[i].share / 100;
+          totalMaxRot += Math.round(personMax * share);
+        }
+        rotDeduction = Math.min(rawRot, totalMaxRot);
+      } else {
+        // No customer ROT info yet — cap at single person max
+        rotDeduction = Math.min(rawRot, rotMaxPerPerson);
+      }
+    }
     const finalTotal = totalInclVat - rotDeduction;
 
     const recalculatedData: CalculationData = {

@@ -12,6 +12,7 @@ interface UserProfile {
   phone: string | null;
   role: string;
   installer_type: string | null;
+  is_active: boolean;
   profile_photo_url: string | null;
   created_at: string;
 }
@@ -31,6 +32,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
   const [newPassword, setNewPassword] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [installerType, setInstallerType] = useState<string | null>(null);
+  const [isActive, setIsActive] = useState(true);
 
   const router = useRouter();
 
@@ -54,6 +56,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
       setPhone(data.user.phone || '');
       setRole(data.user.role);
       setInstallerType(data.user.installer_type || null);
+      setIsActive(data.user.is_active !== false);
     } catch (err) {
       setError('Något gick fel');
     } finally {
@@ -73,6 +76,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
         lastName,
         phone,
         installer_type: installerType,
+        is_active: isActive,
       };
 
       if (newPassword) {
@@ -356,6 +360,30 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
                   Underentreprenad
                 </button>
               </div>
+
+              {installerType && (
+                <div className="mt-4 flex items-center justify-between border-t pt-4">
+                  <div>
+                    <div className="font-medium text-gray-800">Aktiv installatör</div>
+                    <div className="text-sm text-gray-600">
+                      Inaktiva installatörer visas inte i tilldelningslistan
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsActive(!isActive)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+                      isActive ? 'bg-green-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                        isActive ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Password */}

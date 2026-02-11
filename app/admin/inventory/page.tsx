@@ -49,6 +49,20 @@ export default function InventoryPage() {
   const [adjustAmount, setAdjustAmount] = useState('');
   const [adjustNotes, setAdjustNotes] = useState('');
 
+  // History state
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState<Array<{
+    id: number;
+    material_name: string;
+    material_unit: string;
+    quantity: number;
+    transaction_type: string;
+    reference_type: string;
+    notes: string | null;
+    created_at: string;
+  }>>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
   // Delivery modal state
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
   const [editingShipment, setEditingShipment] = useState<Shipment | null>(null);
@@ -87,6 +101,20 @@ export default function InventoryPage() {
       console.error('Failed to load inventory:', err);
       setLoading(false);
     }
+  };
+
+  const loadHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const res = await fetch('/api/admin/materials/history?limit=100');
+      if (res.ok) {
+        const data = await res.json();
+        setHistory(data.transactions || []);
+      }
+    } catch (err) {
+      console.error('Failed to load history:', err);
+    }
+    setHistoryLoading(false);
   };
 
   const showMessage = (msg: string) => {
@@ -503,6 +531,74 @@ export default function InventoryPage() {
                 </div>
               )}
             </div>
+          </div>
+          {/* History Section */}
+          <div className="bg-white rounded-lg shadow mt-8">
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-gray-800">Lagerhistorik</h2>
+              <button
+                onClick={() => {
+                  if (!showHistory) loadHistory();
+                  setShowHistory(!showHistory);
+                }}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                {showHistory ? 'Dölj historik' : 'Visa historik'}
+              </button>
+            </div>
+            {showHistory && (
+              <div className="p-6">
+                {historyLoading ? (
+                  <div className="text-gray-700 text-center py-4">Laddar historik...</div>
+                ) : history.length === 0 ? (
+                  <div className="text-gray-700 text-center py-4">Ingen historik ännu.</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b text-left">
+                          <th className="pb-2 text-gray-700 font-medium">Datum</th>
+                          <th className="pb-2 text-gray-700 font-medium">Material</th>
+                          <th className="pb-2 text-gray-700 font-medium">Typ</th>
+                          <th className="pb-2 text-gray-700 font-medium text-right">Ändring</th>
+                          <th className="pb-2 text-gray-700 font-medium">Anteckning</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {history.map((entry) => (
+                          <tr key={entry.id} className="border-b border-gray-100">
+                            <td className="py-2 text-gray-800">
+                              {new Date(entry.created_at).toLocaleString('sv-SE', {
+                                day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+                              })}
+                            </td>
+                            <td className="py-2 text-gray-800">{entry.material_name}</td>
+                            <td className="py-2">
+                              <span className={`px-1.5 py-0.5 rounded text-xs ${
+                                entry.transaction_type === 'received' ? 'bg-green-100 text-green-700'
+                                  : entry.transaction_type === 'consumed' ? 'bg-red-100 text-red-700'
+                                  : 'bg-gray-100 text-gray-700'
+                              }`}>
+                                {entry.transaction_type === 'received' ? 'Leverans'
+                                  : entry.transaction_type === 'consumed' ? 'Förbrukat'
+                                  : entry.transaction_type === 'adjustment' ? 'Justering'
+                                  : entry.transaction_type}
+                              </span>
+                            </td>
+                            <td className={`py-2 text-right font-medium ${
+                              entry.quantity > 0 ? 'text-green-700' : 'text-red-700'
+                            }`}>
+                              {entry.quantity > 0 ? '+' : ''}{entry.quantity} {entry.material_unit}
+                            </td>
+                            <td className="py-2 text-gray-600">{entry.notes || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

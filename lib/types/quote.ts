@@ -44,6 +44,11 @@ export interface QuoteRequest {
   // ROT customer info (stored as JSON string in DB)
   rot_customer_info: string | null;
   rot_info_token: string | null;
+  rot_max_per_person: number | null;
+  rot_customer_max: Record<string, number> | null;
+
+  // Customer portal token (on quote, not booking)
+  customer_token: string | null;
 
   // Installer count
   num_installers: number;
@@ -189,6 +194,8 @@ export interface UpdateQuoteRequestInput {
   rot_customer_info?: string;
   rot_info_token?: string;
   num_installers?: number;
+  apply_rot_deduction?: boolean;
+  rot_max_per_person?: number;
 }
 
 // Query filters for listing quotes

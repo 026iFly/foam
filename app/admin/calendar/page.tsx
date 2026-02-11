@@ -381,7 +381,9 @@ export default function CalendarPage() {
                                             : 'bg-yellow-100 text-yellow-700'
                                         }`}
                                       >
-                                        {inst.first_name} {inst.last_name?.charAt(0)}.
+                                        {inst.first_name || inst.last_name
+                                          ? `${inst.first_name || ''} ${inst.last_name ? inst.last_name.charAt(0) + '.' : ''}`.trim()
+                                          : 'Installatör'}
                                         {inst.is_lead && ' *'}
                                       </span>
                                     ))}

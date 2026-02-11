@@ -52,6 +52,9 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
   const [generatingRotLink, setGeneratingRotLink] = useState(false);
   const [recalculating, setRecalculating] = useState(false);
   const [sendingRotLink, setSendingRotLink] = useState(false);
+  const [rotEnabled, setRotEnabled] = useState(false);
+  const [rotMaxPerPerson, setRotMaxPerPerson] = useState(50000);
+  const [savingRotSettings, setSavingRotSettings] = useState(false);
 
   // Booking state
   const [showBookingModal, setShowBookingModal] = useState(false);
@@ -111,6 +114,10 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
         // Use adjusted data if available, otherwise use original
         const calcData = data.adjusted_data || data.calculation_data;
         setEditedRecommendations(calcData?.recommendations || []);
+        // Set ROT settings
+        const cd = data.adjusted_data || data.calculation_data;
+        setRotEnabled(cd?.options?.applyRotDeduction ?? false);
+        setRotMaxPerPerson(data.rot_max_per_person ?? 50000);
         // Set ROT link if token exists
         if (data.rot_info_token) {
           const baseUrl = window.location.origin;
@@ -359,7 +366,7 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
             openCellThickness: rec.openCellThickness,
           })),
           climate: calcData.climate,
-          options: calcData.options,
+          options: { ...calcData.options, applyRotDeduction: rotEnabled },
         }),
       });
 
@@ -397,7 +404,30 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
     const vat = Math.round(totalExclVat * 0.25);
     const totalInclVat = totalExclVat + vat;
     const laborCostInclVat = laborCostTotal * 1.25;
-    const rotDeduction = calcData.options.applyRotDeduction ? Math.round(laborCostInclVat * 0.30) : 0;
+    const rawRot = Math.round(laborCostInclVat * 0.30);
+    let rotDeduction = 0;
+    if (rotEnabled) {
+      const maxPP = rotMaxPerPerson || 50000;
+      // If we have customer ROT info with persons, cap per person
+      let rotInfo: { customers?: Array<{ share: number }> } | null = null;
+      if (quote.rot_customer_info) {
+        try {
+          rotInfo = typeof quote.rot_customer_info === 'string'
+            ? JSON.parse(quote.rot_customer_info) : quote.rot_customer_info;
+        } catch { /* ignore */ }
+      }
+      const customerMaxData = quote.rot_customer_max;
+      if (rotInfo?.customers?.length) {
+        let totalMaxRot = 0;
+        for (let i = 0; i < rotInfo.customers.length; i++) {
+          const personMax = customerMaxData?.[String(i)] ?? maxPP;
+          totalMaxRot += Math.round(personMax * (rotInfo.customers[i].share / 100));
+        }
+        rotDeduction = Math.min(rawRot, totalMaxRot);
+      } else {
+        rotDeduction = Math.min(rawRot, maxPP);
+      }
+    }
     const finalTotal = totalInclVat - rotDeduction;
 
     return {
@@ -425,6 +455,10 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
       const adjustedData: CalculationData = {
         ...calcData!,
         recommendations: editedRecommendations,
+        options: {
+          ...calcData!.options,
+          applyRotDeduction: rotEnabled,
+        },
         totals: {
           ...calcData!.totals,
           ...newTotals,
@@ -565,6 +599,31 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
       setRotLinkCopied(true);
       setTimeout(() => setRotLinkCopied(false), 2000);
     }
+  };
+
+  const handleSaveRotSettings = async () => {
+    setSavingRotSettings(true);
+    try {
+      const res = await fetch(`/api/admin/quotes/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          apply_rot_deduction: rotEnabled,
+          rot_max_per_person: rotMaxPerPerson,
+        }),
+      });
+      if (res.ok) {
+        // Trigger recalculation with new ROT settings
+        await handleRecalculate();
+        await fetchQuote();
+      } else {
+        const error = await res.json();
+        alert(`Fel: ${error.error || 'Kunde inte spara ROT-inställningar'}`);
+      }
+    } catch (error) {
+      console.error('Error saving ROT settings:', error);
+    }
+    setSavingRotSettings(false);
   };
 
   const handleSendRotLink = async () => {
@@ -714,13 +773,77 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
               )}
             </div>
 
-            {/* ROT Information Section */}
-            {calcData?.options.applyRotDeduction && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-semibold mb-4 text-gray-900 flex items-center gap-2">
-                  <span className="text-blue-600">🏠</span>
-                  ROT-avdrag Information
-                </h2>
+            {/* ROT Settings & Information Section */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-semibold mb-4 text-gray-900 flex items-center gap-2">
+                <span className="text-blue-600">🏠</span>
+                ROT-avdrag
+              </h2>
+
+              {/* ROT Toggle + Max per person */}
+              <div className="border border-gray-200 rounded-lg p-4 mb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-medium text-gray-900">Aktivera ROT-avdrag</span>
+                  <button
+                    onClick={() => setRotEnabled(!rotEnabled)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      rotEnabled ? 'bg-green-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        rotEnabled ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {rotEnabled && (
+                  <div className="mb-3">
+                    <label className="block text-sm text-gray-700 mb-1">Max ROT per person (kr)</label>
+                    <input
+                      type="number"
+                      value={rotMaxPerPerson}
+                      onChange={(e) => setRotMaxPerPerson(parseInt(e.target.value) || 0)}
+                      min={0}
+                      max={50000}
+                      step={1000}
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                    />
+                    <p className="text-xs text-gray-600 mt-1">Lagstadgat max: 50 000 kr/person/år</p>
+                  </div>
+                )}
+
+                {rotEnabled && calculatedTotals && (
+                  <div className="bg-blue-50 rounded p-3 text-sm space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-gray-700">30% av arbete inkl moms:</span>
+                      <span className="font-medium text-gray-900">
+                        {Math.round(calculatedTotals.laborCostTotal * 1.25 * 0.30).toLocaleString('sv-SE')} kr
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-700">Max per person:</span>
+                      <span className="font-medium text-gray-900">{rotMaxPerPerson.toLocaleString('sv-SE')} kr</span>
+                    </div>
+                    <div className="flex justify-between border-t border-blue-200 pt-1">
+                      <span className="font-medium text-gray-900">Beräknat ROT-avdrag:</span>
+                      <span className="font-bold text-blue-700">{calculatedTotals.rotDeduction.toLocaleString('sv-SE')} kr</span>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleSaveRotSettings}
+                  disabled={savingRotSettings}
+                  className="mt-3 w-full px-4 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 transition disabled:bg-gray-400 text-sm"
+                >
+                  {savingRotSettings ? 'Sparar...' : 'Spara ROT-inställningar & räkna om'}
+                </button>
+              </div>
+
+            {rotEnabled && (
+              <>
 
                 {/* ROT Customer Info - if submitted */}
                 {quote.rot_customer_info ? (
@@ -849,8 +972,9 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                     </div>
                   )}
                 </div>
-              </div>
+              </>
             )}
+            </div>
 
             {/* Building Parts Breakdown */}
             <div className="bg-white rounded-lg shadow-md p-6">
@@ -1195,8 +1319,7 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                               </div>
                             </div>
                             <div className="flex gap-1">
-                              {booking.booking_type === 'installation' &&
-                                booking.status !== 'completed' &&
+                              {booking.status !== 'completed' &&
                                 booking.status !== 'cancelled' && (
                                 <button
                                   onClick={() => setConfirmBookingId(booking.id)}
@@ -1219,7 +1342,9 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                                       : 'bg-yellow-100 text-yellow-700'
                                   }`}
                                 >
-                                  {inst.first_name} {inst.last_name?.charAt(0)}.
+                                  {inst.first_name || inst.last_name
+                                    ? `${inst.first_name || ''} ${inst.last_name ? inst.last_name.charAt(0) + '.' : ''}`.trim()
+                                    : 'Installatör'}
                                   {inst.is_lead && ' *'}
                                 </span>
                               ))}
@@ -1228,14 +1353,12 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                           {/* Action buttons */}
                           {booking.status !== 'completed' && booking.status !== 'cancelled' && (
                             <div className="mt-1 flex flex-wrap gap-2">
-                              {booking.booking_type === 'installation' && (
-                                <button
-                                  onClick={() => openAssignInstallers(booking)}
-                                  className="text-xs text-blue-600 hover:text-blue-800 underline"
-                                >
-                                  {booking.installers && booking.installers.length > 0 ? 'Ändra installatörer' : 'Tilldela installatörer'}
-                                </button>
-                              )}
+                              <button
+                                onClick={() => openAssignInstallers(booking)}
+                                className="text-xs text-blue-600 hover:text-blue-800 underline"
+                              >
+                                {booking.installers && booking.installers.length > 0 ? 'Ändra installatörer' : 'Tilldela installatörer'}
+                              </button>
                               <button
                                 onClick={() => openEditBooking(booking)}
                                 className="text-xs text-gray-700 hover:text-gray-900 underline"
@@ -1553,8 +1676,8 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">ROT-avdrag:</span>
-                    <span className={`font-medium ${calcData.options.applyRotDeduction ? 'text-green-600' : 'text-gray-900'}`}>
-                      {calcData.options.applyRotDeduction ? 'Ja' : 'Nej'}
+                    <span className={`font-medium ${rotEnabled ? 'text-green-600' : 'text-gray-900'}`}>
+                      {rotEnabled ? 'Ja' : 'Nej'}
                     </span>
                   </div>
                 </div>

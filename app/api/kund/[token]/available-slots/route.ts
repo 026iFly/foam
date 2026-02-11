@@ -7,7 +7,7 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// GET - Get available slots for rebooking/self-booking
+// GET - Get available slots for booking/rebooking
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
@@ -15,19 +15,27 @@ export async function GET(
   try {
     const { token } = await params;
 
-    // Find booking to get num_installers and slot_type
-    const { data: booking, error } = await supabaseAdmin
-      .from('bookings')
-      .select('id, num_installers, slot_type')
+    // Find quote by customer token to get num_installers
+    const { data: quote, error: quoteError } = await supabaseAdmin
+      .from('quote_requests')
+      .select('id, num_installers')
       .eq('customer_token', token)
       .single();
 
-    if (error || !booking) {
-      return NextResponse.json({ error: 'Bokning ej hittad' }, { status: 404 });
+    if (quoteError || !quote) {
+      return NextResponse.json({ error: 'Offert ej hittad' }, { status: 404 });
     }
 
-    const numInstallers = booking.num_installers || 2;
-    const slotType = (booking.slot_type || 'full') as 'full' | 'morning' | 'afternoon';
+    // Check if there's an existing booking with slot_type
+    const { data: bookings } = await supabaseAdmin
+      .from('bookings')
+      .select('slot_type')
+      .eq('quote_id', quote.id)
+      .eq('booking_type', 'installation')
+      .limit(1);
+
+    const numInstallers = quote.num_installers || 2;
+    const slotType = ((bookings?.[0]?.slot_type) || 'full') as 'full' | 'morning' | 'afternoon';
 
     // Look ahead 8 weeks
     const fromDate = new Date();

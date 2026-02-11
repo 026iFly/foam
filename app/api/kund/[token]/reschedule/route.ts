@@ -6,7 +6,7 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// POST - Reschedule booking
+// POST - Reschedule booking (lookup via quote's customer_token)
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
@@ -20,14 +20,28 @@ export async function POST(
       return NextResponse.json({ error: 'Nytt datum krävs' }, { status: 400 });
     }
 
-    // Find booking
-    const { data: booking, error } = await supabaseAdmin
-      .from('bookings')
-      .select('id, scheduled_date, status')
+    // Find quote by customer token
+    const { data: quote, error: quoteError } = await supabaseAdmin
+      .from('quote_requests')
+      .select('id')
       .eq('customer_token', token)
       .single();
 
-    if (error || !booking) {
+    if (quoteError || !quote) {
+      return NextResponse.json({ error: 'Offert ej hittad' }, { status: 404 });
+    }
+
+    // Find the booking linked to this quote
+    const { data: booking, error: bookingError } = await supabaseAdmin
+      .from('bookings')
+      .select('id, scheduled_date, status')
+      .eq('quote_id', quote.id)
+      .eq('booking_type', 'installation')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (bookingError || !booking) {
       return NextResponse.json({ error: 'Bokning ej hittad' }, { status: 404 });
     }
 

@@ -20,22 +20,18 @@ export async function POST(
       return NextResponse.json({ error: 'Efternamn krävs' }, { status: 400 });
     }
 
-    // Find booking by customer token
-    const { data: booking, error } = await supabaseAdmin
-      .from('bookings')
-      .select(`
-        id, customer_token,
-        quote_requests (customer_name)
-      `)
+    // Find quote by customer token (token now lives on quote_requests)
+    const { data: quote, error } = await supabaseAdmin
+      .from('quote_requests')
+      .select('id, customer_name, customer_token')
       .eq('customer_token', token)
       .single();
 
-    if (error || !booking) {
-      return NextResponse.json({ error: 'Bokning ej hittad' }, { status: 404 });
+    if (error || !quote) {
+      return NextResponse.json({ error: 'Offert ej hittad' }, { status: 404 });
     }
 
-    const quoteData = booking.quote_requests as unknown as { customer_name: string } | null;
-    const customerName = quoteData?.customer_name || '';
+    const customerName = quote.customer_name || '';
 
     // Check surname (case-insensitive, check if it's the last word in the name)
     const nameParts = customerName.trim().split(/\s+/);
@@ -48,7 +44,7 @@ export async function POST(
 
     return NextResponse.json({
       verified: true,
-      booking_id: booking.id,
+      quote_id: quote.id,
     });
   } catch (err) {
     console.error('Customer verify error:', err);

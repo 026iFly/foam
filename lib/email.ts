@@ -47,11 +47,16 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
   try {
     await transporter.sendMail({
       from: `"Intellifoam" <${fromAddress}>`,
+      replyTo: process.env.SMTP_REPLY_TO || 'info@intellifoam.se',
       to: options.to,
       subject: options.subject,
       text: options.text,
       html: options.html,
       attachments: options.attachments,
+      headers: {
+        'X-Mailer': 'Intellifoam',
+        'List-Unsubscribe': `<mailto:info@intellifoam.se?subject=unsubscribe>`,
+      },
     });
 
     console.log(`Email sent to ${options.to}: ${options.subject}`);
@@ -131,6 +136,37 @@ Logga in på din kundportal för att välja installationsdatum och se detaljer:
 {{portal_link}}
 
 Har du frågor? Kontakta oss på 010 703 74 00 eller info@intellifoam.se.
+
+Med vänliga hälsningar,
+Intellifoam`,
+      },
+      installer_confirmation: {
+        subject: 'Ny bokning att bekräfta - {{customer_name}}',
+        body: `Hej {{installer_name}},
+
+Du har tilldelats en ny installation som behöver bekräftas.
+
+Kund: {{customer_name}}
+Adress: {{customer_address}}
+Datum: {{installation_date}}
+Tid: {{slot_type}}
+
+Klicka här för att acceptera eller avböja:
+{{confirm_link}}
+
+Med vänliga hälsningar,
+Intellifoam`,
+      },
+      booking_confirmation: {
+        subject: 'Bekräftelse av din installation - Intellifoam',
+        body: `Hej {{customer_name}},
+
+Din installation är nu bekräftad!
+
+Datum: {{installation_date}}
+Adress: {{customer_address}}
+
+Vi ser fram emot att hjälpa dig. Har du frågor? Kontakta oss på 010 703 74 00.
 
 Med vänliga hälsningar,
 Intellifoam`,
@@ -377,6 +413,47 @@ export async function sendInstallerConfirmationEmail(
 
   return sendEmail({
     to: installer.email,
+    subject,
+    text,
+    html: text.replace(/\n/g, '<br>'),
+  });
+}
+
+/**
+ * Send booking confirmation email to customer (when all installers accepted)
+ */
+export async function sendBookingConfirmationEmail(
+  customer: {
+    customer_name: string;
+    customer_email: string;
+    customer_address: string;
+    installation_date: string;
+  }
+): Promise<boolean> {
+  const template = await getTemplate('booking_confirmation');
+  if (!template) {
+    console.error('Booking confirmation template not found');
+    return false;
+  }
+
+  const formattedDate = new Date(customer.installation_date).toLocaleDateString('sv-SE', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+
+  const variables = {
+    customer_name: customer.customer_name,
+    customer_address: customer.customer_address,
+    installation_date: formattedDate,
+    company_name: 'Intellifoam',
+  };
+
+  const subject = replaceTemplateVariables(template.subject, variables);
+  const text = replaceTemplateVariables(template.body, variables);
+
+  return sendEmail({
+    to: customer.customer_email,
     subject,
     text,
     html: text.replace(/\n/g, '<br>'),

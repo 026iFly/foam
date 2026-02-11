@@ -259,6 +259,8 @@ export async function inviteUser(
 ): Promise<{ user: any; error: Error | null }> {
   const adminClient = createSupabaseAdminClient();
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://www.intellifoam.se';
+
   // Create user with invite
   const { data, error } = await adminClient.auth.admin.inviteUserByEmail(email, {
     data: {
@@ -266,6 +268,7 @@ export async function inviteUser(
       last_name: lastName,
       role,
     },
+    redirectTo: `${siteUrl}/auth/callback`,
   });
 
   if (error) {
@@ -284,8 +287,9 @@ export async function inviteUser(
 export async function sendPasswordReset(email: string): Promise<boolean> {
   const adminClient = createSupabaseAdminClient();
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://www.intellifoam.se';
   const { error } = await adminClient.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/reset-password`,
+    redirectTo: `${siteUrl}/auth/reset-password`,
   });
 
   if (error) {

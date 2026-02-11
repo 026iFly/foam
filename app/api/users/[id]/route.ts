@@ -60,7 +60,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { firstName, lastName, phone, email, newPassword, sendResetEmail, installer_type } = body;
+    const { firstName, lastName, phone, email, newPassword, sendResetEmail, installer_type, is_active } = body;
 
     // Update profile fields
     const updates: any = {};
@@ -69,6 +69,7 @@ export async function PUT(
     if (phone !== undefined) updates.phone = phone;
     if (email !== undefined) updates.email = email;
     if (installer_type !== undefined) updates.installer_type = installer_type;
+    if (is_active !== undefined) updates.is_active = is_active;
 
     if (Object.keys(updates).length > 0) {
       const updatedUser = await updateUserProfile(id, updates);

@@ -21,33 +21,66 @@ export async function POST(
       return NextResponse.json({ error: 'Datum krävs' }, { status: 400 });
     }
 
-    // Find booking by customer token
-    const { data: booking, error } = await supabaseAdmin
-      .from('bookings')
-      .select('id, status, scheduled_date')
+    // Find quote by customer token
+    const { data: quote, error: quoteError } = await supabaseAdmin
+      .from('quote_requests')
+      .select('id, num_installers')
       .eq('customer_token', token)
       .single();
 
-    if (error || !booking) {
-      return NextResponse.json({ error: 'Bokning ej hittad' }, { status: 404 });
+    if (quoteError || !quote) {
+      return NextResponse.json({ error: 'Offert ej hittad' }, { status: 404 });
     }
 
-    // Update booking with selected date
-    const { error: updateError } = await supabaseAdmin
+    // Check if a booking already exists for this quote
+    const { data: existingBookings } = await supabaseAdmin
       .from('bookings')
-      .update({
-        scheduled_date: date,
-        customer_booked_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', booking.id);
+      .select('id, status')
+      .eq('quote_id', quote.id)
+      .eq('booking_type', 'installation')
+      .limit(1);
 
-    if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    let bookingId: number;
+
+    if (existingBookings && existingBookings.length > 0) {
+      // Update existing booking with selected date
+      bookingId = existingBookings[0].id;
+      const { error: updateError } = await supabaseAdmin
+        .from('bookings')
+        .update({
+          scheduled_date: date,
+          customer_booked_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', bookingId);
+
+      if (updateError) {
+        return NextResponse.json({ error: updateError.message }, { status: 500 });
+      }
+    } else {
+      // Create new booking linked to the quote
+      const { data: newBooking, error: createError } = await supabaseAdmin
+        .from('bookings')
+        .insert({
+          quote_id: quote.id,
+          booking_type: 'installation',
+          scheduled_date: date,
+          status: 'scheduled',
+          num_installers: quote.num_installers || 2,
+          customer_booked_at: new Date().toISOString(),
+          notes: 'Datum valt av kund via portalen.',
+        })
+        .select('id')
+        .single();
+
+      if (createError || !newBooking) {
+        return NextResponse.json({ error: createError?.message || 'Kunde inte skapa bokning' }, { status: 500 });
+      }
+      bookingId = newBooking.id;
     }
 
     // Auto-assign installers
-    const result = await autoAssignInstallers(booking.id);
+    const result = await autoAssignInstallers(bookingId);
 
     return NextResponse.json({
       success: true,

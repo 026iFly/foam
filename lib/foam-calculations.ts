@@ -503,98 +503,19 @@ export function recommendFoamConfiguration(params: {
     }
   }
 
-  // Has vapor barrier -> can use open cell OR flash-and-batt
+  // Has vapor barrier -> use open cell only (vapor barrier handles moisture control)
   if (hasVaporBarrier) {
-    // If target thickness specified, use it; otherwise try flash-and-batt optimization
-    if (targetThickness && targetThickness >= minThicknessOpen) {
-      // User specified thickness - calculate flash-and-batt configuration
-      const estimatedOpenThickness = Math.max(0, targetThickness - 50);
+    const thickness = targetThickness || minThicknessOpen;
+    const uValue = FOAM_PROPERTIES.open_cell.lambda / (thickness / 1000);
 
-      const minClosedCalc = calculateMinClosedCellThickness({
-        T_in: indoorTemp,
-        RH_in: indoorRH,
-        T_out: outdoorTemp,
-        openCellThickness: estimatedOpenThickness,
-        safetyMargin,
-      });
-
-      let closedThickness = Math.ceil(minClosedCalc.minThickness / 5) * 5;
-      closedThickness = Math.max(closedThickness, 40);
-      const openThickness = targetThickness - closedThickness;
-
-      // Decision: Is it worth using flash-and-batt?
-      // If open-cell < 50mm, just use closed-cell only (not worth the switching time)
-      if (openThickness < 50) {
-        return {
-          config: 'closed_only',
-          closedThickness: targetThickness,
-          openThickness: 0,
-          totalThickness: targetThickness,
-          explanation: `Vid ${targetThickness}mm total tjocklek rekommenderar vi enbart slutencellsskum (${targetThickness}mm). Flash-and-batt skulle ge ${closedThickness}mm slutencell + ${openThickness}mm öppencell, men öppencellsskiktet blir för tunt (under 50mm) för att motivera extra arbetstid (~1h) för byte av skumtyp. Rent slutencellsskum blir därför mer kostnadseffektivt.`,
-          uValue: FOAM_PROPERTIES.closed_cell.lambda / (targetThickness / 1000),
-        };
-      }
-
-      // Flash-and-batt is economically viable
-      const R_closed = closedThickness / 1000 / FOAM_PROPERTIES.closed_cell.lambda;
-      const R_open = openThickness / 1000 / FOAM_PROPERTIES.open_cell.lambda;
-      const R_total = R_closed + R_open;
-      const uValue = 1 / R_total;
-
-      return {
-        config: 'flash_and_batt',
-        closedThickness,
-        openThickness,
-        totalThickness: targetThickness,
-        explanation: `Flash-and-batt metoden (${closedThickness}mm slutencell + ${openThickness}mm öppencell = ${targetThickness}mm totalt): Vi lägger först ${closedThickness}mm slutencellsskum mot yttre sidan som ångbroms och lufttätning, vilket håller gränsskiktet vid ${minClosedCalc.T_interface.toFixed(1)}°C (säkert över daggpunkten ${minClosedCalc.T_dew.toFixed(1)}°C). Därefter lägger vi ${openThickness}mm öppencellsskum för kostnadseffektiv isolering. Detta ger bästa balansen mellan säkerhet, prestanda och ekonomi.`,
-        uValue,
-      };
-    }
-
-    // No target thickness specified - prefer flash-and-batt for cost and practicality
-    // Use BBR minimum for open-cell as target, then calculate optimal closed/open split
-    const targetForAutoCalc = minThicknessOpen;
-    const estimatedOpenForAutoCalc = Math.max(0, targetForAutoCalc - 50);
-
-    const minClosedAutoCalc = calculateMinClosedCellThickness({
-      T_in: indoorTemp,
-      RH_in: indoorRH,
-      T_out: outdoorTemp,
-      openCellThickness: estimatedOpenForAutoCalc,
-      safetyMargin,
-    });
-
-    let closedForAutoCalc = Math.ceil(minClosedAutoCalc.minThickness / 5) * 5;
-    closedForAutoCalc = Math.max(closedForAutoCalc, 40);
-    const openForAutoCalc = targetForAutoCalc - closedForAutoCalc;
-
-    // Check if flash-and-batt is viable
-    if (openForAutoCalc >= 50) {
-      // Flash-and-batt is economically viable
-      const R_closed_auto = closedForAutoCalc / 1000 / FOAM_PROPERTIES.closed_cell.lambda;
-      const R_open_auto = openForAutoCalc / 1000 / FOAM_PROPERTIES.open_cell.lambda;
-      const uValueAuto = 1 / (R_closed_auto + R_open_auto);
-
-      return {
-        config: 'flash_and_batt',
-        closedThickness: closedForAutoCalc,
-        openThickness: openForAutoCalc,
-        totalThickness: targetForAutoCalc,
-        explanation: `Flash-and-batt metoden (${closedForAutoCalc}mm slutencell + ${openForAutoCalc}mm öppencell = ${targetForAutoCalc}mm totalt): Vi lägger först ${closedForAutoCalc}mm slutencellsskum mot yttre sidan som ångbroms och lufttätning, därefter ${openForAutoCalc}mm öppencellsskum som är enklare att arbeta med och kostnadseffektivt. Detta ger bästa balansen mellan säkerhet, prestanda och ekonomi samtidigt som det uppfyller BBR-krav (U ≤ ${BBR_U_VALUES[buildingPart]} W/m²K).`,
-        uValue: uValueAuto,
-      };
-    } else {
-      // Flash-and-batt not viable - use closed-only
-      const thickness = minThicknessClosed;
-      return {
-        config: 'closed_only',
-        closedThickness: thickness,
-        openThickness: 0,
-        totalThickness: thickness,
-        explanation: `Med ångspärr rekommenderar vi ${thickness}mm slutencellsskum som uppfyller BBR-krav (U ≤ ${BBR_U_VALUES[buildingPart]} W/m²K). Vid detta klimat och denna konstruktion skulle öppencellsskiktet i en flash-and-batt-lösning bli för tunt för att vara ekonomiskt försvarbart.`,
-        uValue: FOAM_PROPERTIES.closed_cell.lambda / (thickness / 1000),
-      };
-    }
+    return {
+      config: 'open_only',
+      closedThickness: 0,
+      openThickness: thickness,
+      totalThickness: thickness,
+      explanation: `Med befintlig ångspärr rekommenderas enbart öppencellsskum (${thickness}mm). Ångspärren förhindrar fukttransport, så slutencellsskum behövs inte. Öppencellsskum är kostnadseffektivt (lägre densitet, 10 kg/m³) och ger god isolering. Uppfyller BBR-krav (U ≤ ${BBR_U_VALUES[buildingPart]} W/m²K).`,
+      uValue,
+    };
   }
 
   // Default fallback

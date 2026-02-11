@@ -5,6 +5,7 @@ import {
   createCalendarEvent,
   BookingWithCustomer,
 } from '@/lib/google-calendar';
+import { autoAssignInstallers, sendInstallerNotifications } from '@/lib/auto-assign';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -130,7 +131,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Assign installers if provided
+    // Assign installers if provided, or auto-assign
     if (installer_ids && Array.isArray(installer_ids) && installer_ids.length > 0) {
       const rows = installer_ids.map((installerId: string) => ({
         booking_id: booking.id,
@@ -145,6 +146,31 @@ export async function POST(request: NextRequest) {
 
       if (assignError) {
         console.error('Error assigning installers:', assignError);
+      } else {
+        // Send confirmation notifications to manually assigned installers
+        const { data: quoteData } = quote_id
+          ? await supabaseAdmin
+              .from('quote_requests')
+              .select('customer_name, customer_address')
+              .eq('id', quote_id)
+              .single()
+          : { data: null };
+
+        for (const installerId of installer_ids) {
+          sendInstallerNotifications(booking.id, installerId, {
+            customer_name: quoteData?.customer_name || '',
+            customer_address: quoteData?.customer_address || '',
+            installation_date: scheduled_date,
+            slot_type: slot_type || 'full',
+          }).catch(console.error);
+        }
+      }
+    } else {
+      // Auto-assign installers for both installation and home visit bookings
+      try {
+        await autoAssignInstallers(booking.id);
+      } catch (err) {
+        console.error('Error auto-assigning installers:', err);
       }
     }
 

@@ -142,6 +142,8 @@ export async function updateQuoteRequest(id: number, input: UpdateQuoteRequestIn
       : input.rot_customer_info;
   }
   if (input.rot_info_token !== undefined) updates.rot_info_token = input.rot_info_token;
+  if (input.apply_rot_deduction !== undefined) updates.apply_rot_deduction = input.apply_rot_deduction;
+  if (input.rot_max_per_person !== undefined) updates.rot_max_per_person = input.rot_max_per_person;
 
   if (Object.keys(updates).length === 0) {
     return false;

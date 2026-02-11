@@ -45,7 +45,10 @@ export async function POST(
     const forwardedFor = request.headers.get('x-forwarded-for');
     const clientIp = forwardedFor?.split(',')[0]?.trim() || 'unknown';
 
-    // Update quote
+    // Generate customer token and store on quote (for portal access)
+    const customerToken = crypto.randomUUID();
+
+    // Update quote with acceptance + customer token
     const { error: updateError } = await supabaseAdmin
       .from('quote_requests')
       .update({
@@ -53,6 +56,7 @@ export async function POST(
         accepted_at: new Date().toISOString(),
         signed_name: signed_name.trim(),
         signed_ip: clientIp,
+        customer_token: customerToken,
       })
       .eq('id', quote.id);
 
@@ -61,17 +65,15 @@ export async function POST(
       return NextResponse.json({ error: 'Kunde inte uppdatera offert' }, { status: 500 });
     }
 
-    // Create a booking with customer token for the portal
-    const customerToken = crypto.randomUUID();
+    // Create a booking (without customer_token — portal access is via quote)
     const { data: newBooking } = await supabaseAdmin
       .from('bookings')
       .insert({
         quote_id: quote.id,
         booking_type: 'installation',
-        scheduled_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Default: 2 weeks out
+        scheduled_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         status: 'scheduled',
         num_installers: quote.num_installers || 2,
-        customer_token: customerToken,
         notes: 'Automatiskt skapad efter offertacceptans. Datum behöver bekräftas.',
       })
       .select()
@@ -85,14 +87,12 @@ export async function POST(
       total_incl_vat: quote.adjusted_total_incl_vat || quote.total_incl_vat,
     }).catch(err => console.error('Discord notification failed:', err));
 
-    // Send order confirmation email with portal link
-    if (newBooking) {
-      sendOrderConfirmationEmail({
-        customer_name: quote.customer_name,
-        customer_email: quote.customer_email,
-        customer_token: customerToken,
-      }).catch(err => console.error('Order confirmation email failed:', err));
-    }
+    // Send order confirmation email with portal link (token is on quote, not booking)
+    sendOrderConfirmationEmail({
+      customer_name: quote.customer_name,
+      customer_email: quote.customer_email,
+      customer_token: customerToken,
+    }).catch(err => console.error('Order confirmation email failed:', err));
 
     return NextResponse.json({
       success: true,

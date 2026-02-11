@@ -81,6 +81,14 @@ export async function PUT(
     if (body.quote_valid_until !== undefined) updateData.quote_valid_until = body.quote_valid_until;
     if (body.num_installers !== undefined) updateData.num_installers = body.num_installers;
 
+    // ROT controls
+    if (body.apply_rot_deduction !== undefined) {
+      updateData.apply_rot_deduction = body.apply_rot_deduction;
+    }
+    if (body.rot_max_per_person !== undefined) {
+      updateData.rot_max_per_person = body.rot_max_per_person;
+    }
+
     const success = await updateQuoteRequest(parseInt(id), updateData);
 
     if (!success) {

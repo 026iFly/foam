@@ -568,6 +568,79 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
+                  {/* ROT-avdrag */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4 text-emerald-700">ROT-avdrag</h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b pb-3">
+                        <div>
+                          <div className="font-medium text-gray-800">Max ROT per person</div>
+                          <div className="text-sm text-gray-600">Standardvärde för nya offerter (lagstadgat max 50 000 kr/person/år)</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            step="1000"
+                            min="0"
+                            max="50000"
+                            defaultValue={(() => {
+                              const current = settings.find(s => s.key === 'rot_settings');
+                              return (current?.value as Record<string, number>)?.max_per_person ?? 50000;
+                            })()}
+                            onBlur={(e) => {
+                              const val = parseInt(e.target.value);
+                              if (!isNaN(val)) {
+                                const current = settings.find(s => s.key === 'rot_settings');
+                                updateSetting('rot_settings', {
+                                  ...(current?.value as Record<string, unknown>),
+                                  max_per_person: Math.min(val, 50000),
+                                });
+                              }
+                            }}
+                            className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900"
+                          />
+                          <span className="text-gray-700">kr</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between border-b pb-3">
+                        <div>
+                          <div className="font-medium text-gray-800">ROT-procent av arbetskostnad</div>
+                          <div className="text-sm text-gray-600">Andel av arbetskostnad inkl. moms som dras av (lagstadgat 30%)</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            step="1"
+                            min="0"
+                            max="100"
+                            defaultValue={(() => {
+                              const current = settings.find(s => s.key === 'rot_settings');
+                              return (current?.value as Record<string, number>)?.percentage ?? 30;
+                            })()}
+                            onBlur={(e) => {
+                              const val = parseInt(e.target.value);
+                              if (!isNaN(val)) {
+                                const current = settings.find(s => s.key === 'rot_settings');
+                                updateSetting('rot_settings', {
+                                  ...(current?.value as Record<string, unknown>),
+                                  percentage: val,
+                                });
+                              }
+                            }}
+                            className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900"
+                          />
+                          <span className="text-gray-700">%</span>
+                        </div>
+                      </div>
+                      <div className="p-3 bg-emerald-50 rounded-lg">
+                        <p className="text-sm text-emerald-800">
+                          <strong>ROT-regler:</strong> Max 50 000 kr per person per år. Avdrag är 30% av arbetskostnad inkl. moms.
+                          Dessa värden används som standard för nya offerter och kan justeras per offert.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Travel */}
                   <div>
                     <h3 className="text-lg font-semibold mb-4 text-purple-700">Transport & Resa</h3>
