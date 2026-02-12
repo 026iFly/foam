@@ -391,94 +391,79 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
     setRecalculating(false);
   };
 
-  const recalculateTotals = () => {
+  // Use server-side calculated totals (single source of truth)
+  const getDisplayTotals = () => {
     if (!quote) return null;
-
     const calcData = quote.adjusted_data || quote.calculation_data;
     if (!calcData) return null;
-
-    // Recalculate totals based on edited recommendations
-    const materialCostTotal = editedRecommendations.reduce((sum, r) => sum + (r.materialCost || 0), 0);
-    const laborCostTotal = editedRecommendations.reduce((sum, r) => sum + (r.laborCost || 0), 0);
-    const totalExclVat = materialCostTotal + laborCostTotal + calcData.totals.travelCost + calcData.totals.generatorCost;
-    const vat = Math.round(totalExclVat * 0.25);
-    const totalInclVat = totalExclVat + vat;
-    const laborCostInclVat = laborCostTotal * 1.25;
-    const rawRot = Math.round(laborCostInclVat * 0.30);
-    let rotDeduction = 0;
-    if (rotEnabled) {
-      const maxPP = rotMaxPerPerson || 50000;
-      // If we have customer ROT info with persons, cap per person
-      let rotInfo: { customers?: Array<{ share: number }> } | null = null;
-      if (quote.rot_customer_info) {
-        try {
-          rotInfo = typeof quote.rot_customer_info === 'string'
-            ? JSON.parse(quote.rot_customer_info) : quote.rot_customer_info;
-        } catch { /* ignore */ }
-      }
-      const customerMaxData = quote.rot_customer_max;
-      if (rotInfo?.customers?.length) {
-        let totalMaxRot = 0;
-        for (let i = 0; i < rotInfo.customers.length; i++) {
-          const personMax = customerMaxData?.[String(i)] ?? maxPP;
-          totalMaxRot += Math.round(personMax * (rotInfo.customers[i].share / 100));
-        }
-        rotDeduction = Math.min(rawRot, totalMaxRot);
-      } else {
-        rotDeduction = Math.min(rawRot, maxPP);
-      }
-    }
-    const finalTotal = totalInclVat - rotDeduction;
-
-    return {
-      totalArea: editedRecommendations.reduce((sum, r) => sum + (r.area || 0), 0),
-      materialCostTotal,
-      laborCostTotal,
-      travelCost: calcData.totals.travelCost,
-      generatorCost: calcData.totals.generatorCost,
-      totalExclVat,
-      vat,
-      totalInclVat,
-      rotDeduction,
-      finalTotal,
-    };
+    return calcData.totals;
   };
+
+  // Alias for compatibility with save and render
+  const recalculateTotals = getDisplayTotals;
 
   const handleSave = async () => {
     if (!quote) return;
 
     setSaving(true);
     try {
-      const newTotals = recalculateTotals();
+      // Always recalculate via server API first to ensure consistent totals
       const calcData = quote.adjusted_data || quote.calculation_data;
+      if (calcData) {
+        const recalcResponse = await fetch(`/api/admin/quotes/${id}/recalculate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            parts: editedRecommendations.map((r) => ({
+              partId: r.partId,
+              partName: r.partName,
+              partType: r.partType,
+              area: r.area,
+              hasVaporBarrier: r.hasVaporBarrier,
+              closedCellThickness: r.closedCellThickness,
+              openCellThickness: r.openCellThickness,
+            })),
+            climate: calcData.climate,
+            options: {
+              ...calcData.options,
+              applyRotDeduction: rotEnabled,
+            },
+          }),
+        });
 
-      const adjustedData: CalculationData = {
-        ...calcData!,
-        recommendations: editedRecommendations,
-        options: {
-          ...calcData!.options,
-          applyRotDeduction: rotEnabled,
-        },
-        totals: {
-          ...calcData!.totals,
-          ...newTotals,
-        },
-      };
+        if (recalcResponse.ok) {
+          const recalcResult = await recalcResponse.json();
+          const adjustedData = recalcResult.data;
 
-      const response = await fetch(`/api/admin/quotes/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          admin_notes: adminNotes,
-          adjusted_data: adjustedData,
-          adjusted_total_excl_vat: newTotals?.totalExclVat,
-          adjusted_total_incl_vat: newTotals?.finalTotal,
-        }),
-      });
+          const response = await fetch(`/api/admin/quotes/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              admin_notes: adminNotes,
+              adjusted_data: adjustedData,
+              adjusted_total_excl_vat: adjustedData.totals.totalExclVat,
+              adjusted_total_incl_vat: adjustedData.totals.finalTotal,
+            }),
+          });
 
-      if (response.ok) {
-        await fetchQuote();
-        setHasChanges(false);
+          if (response.ok) {
+            await fetchQuote();
+            setHasChanges(false);
+          }
+        } else {
+          // Fallback: save with current data
+          const response = await fetch(`/api/admin/quotes/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              admin_notes: adminNotes,
+            }),
+          });
+          if (response.ok) {
+            await fetchQuote();
+            setHasChanges(false);
+          }
+        }
       }
     } catch (error) {
       console.error('Error saving quote:', error);

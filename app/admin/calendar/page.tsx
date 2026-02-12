@@ -43,6 +43,21 @@ interface Quote {
   status: string;
 }
 
+interface Installer {
+  id: string;
+  first_name: string;
+  last_name: string;
+  installer_type: string;
+}
+
+interface BlockedDate {
+  id: number;
+  installer_id: string;
+  blocked_date: string;
+  slot: string;
+  reason: string;
+}
+
 export default function CalendarPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -66,16 +81,31 @@ export default function CalendarPage() {
   const [selectedInstallerIds, setSelectedInstallerIds] = useState<string[]>([]);
   const [leadInstallerId, setLeadInstallerId] = useState<string | undefined>();
 
+  // Installer filter state
+  const [allInstallers, setAllInstallers] = useState<Installer[]>([]);
+  const [filterInstallerIds, setFilterInstallerIds] = useState<string[]>([]);
+  const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
+
   useEffect(() => {
     loadData();
   }, [currentMonth]);
 
+  useEffect(() => {
+    // Load blocked dates when filter changes
+    if (filterInstallerIds.length > 0) {
+      loadBlockedDates();
+    } else {
+      setBlockedDates([]);
+    }
+  }, [filterInstallerIds]);
+
   const loadData = async () => {
     try {
-      const [bookingsRes, materialsRes, quotesRes] = await Promise.all([
+      const [bookingsRes, materialsRes, quotesRes, installersRes] = await Promise.all([
         fetch('/api/admin/bookings'),
         fetch('/api/admin/materials'),
         fetch('/api/admin/quotes?limit=100'),
+        fetch('/api/admin/installers'),
       ]);
 
       if (bookingsRes.ok) {
@@ -90,11 +120,15 @@ export default function CalendarPage() {
 
       if (quotesRes.ok) {
         const data = await quotesRes.json();
-        // Filter to active quotes only
         const activeQuotes = (data.quotes || []).filter(
           (q: Quote) => !['rejected', 'expired'].includes(q.status)
         );
         setQuotes(activeQuotes);
+      }
+
+      if (installersRes.ok) {
+        const data = await installersRes.json();
+        setAllInstallers(data.installers || []);
       }
 
       setLoading(false);
@@ -102,6 +136,46 @@ export default function CalendarPage() {
       console.error('Failed to load data:', err);
       setLoading(false);
     }
+  };
+
+  const loadBlockedDates = async () => {
+    try {
+      const results = await Promise.all(
+        filterInstallerIds.map(id =>
+          fetch(`/api/admin/installers/${id}/blocked-dates`).then(r => r.json())
+        )
+      );
+      const allBlocked: BlockedDate[] = [];
+      results.forEach((data, idx) => {
+        (data.blocked_dates || []).forEach((bd: BlockedDate) => {
+          allBlocked.push({ ...bd, installer_id: filterInstallerIds[idx] });
+        });
+      });
+      setBlockedDates(allBlocked);
+    } catch (err) {
+      console.error('Failed to load blocked dates:', err);
+    }
+  };
+
+  const getBlockedForDate = (dateStr: string) => {
+    return blockedDates.filter(bd => bd.blocked_date === dateStr);
+  };
+
+  const getInstallerColor = (installerId: string) => {
+    const colors = ['bg-red-200 text-red-800', 'bg-purple-200 text-purple-800', 'bg-orange-200 text-orange-800', 'bg-pink-200 text-pink-800'];
+    const idx = filterInstallerIds.indexOf(installerId);
+    return colors[idx % colors.length];
+  };
+
+  const getInstallerName = (installerId: string) => {
+    const inst = allInstallers.find(i => i.id === installerId);
+    return inst ? `${inst.first_name} ${inst.last_name?.charAt(0) || ''}.`.trim() : 'Okänd';
+  };
+
+  const toggleInstallerFilter = (id: string) => {
+    setFilterInstallerIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
   };
 
   const openBookingModal = (date?: string) => {
@@ -326,6 +400,28 @@ export default function CalendarPage() {
             </div>
           </div>
 
+          {/* Installer Filter */}
+          {allInstallers.length > 0 && (
+            <div className="bg-white rounded-lg shadow p-4 mb-6">
+              <div className="text-sm font-medium text-gray-700 mb-2">Visa blockerade dagar för:</div>
+              <div className="flex flex-wrap gap-2">
+                {allInstallers.map(inst => {
+                  const isActive = filterInstallerIds.includes(inst.id);
+                  const colorClass = isActive ? getInstallerColor(inst.id) : 'bg-gray-100 text-gray-700';
+                  return (
+                    <button
+                      key={inst.id}
+                      onClick={() => toggleInstallerFilter(inst.id)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition ${colorClass} ${isActive ? 'ring-2 ring-offset-1 ring-gray-400' : 'hover:bg-gray-200'}`}
+                    >
+                      {inst.first_name} {inst.last_name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {view === 'list' ? (
             <>
               {/* Upcoming */}
@@ -494,6 +590,7 @@ export default function CalendarPage() {
                     <div key={weekIndex} className="grid grid-cols-7 gap-1">
                       {week.map((day, dayIndex) => {
                         const dayBookings = day.dateStr ? getBookingsForDate(day.dateStr) : [];
+                        const dayBlocked = day.dateStr ? getBlockedForDate(day.dateStr) : [];
                         const isToday = day.dateStr === new Date().toISOString().split('T')[0];
                         const hasVisit = dayBookings.some(b => b.booking_type === 'visit' && b.status !== 'cancelled');
                         const hasInstallation = dayBookings.some(b => b.booking_type === 'installation' && b.status !== 'cancelled');
@@ -508,12 +605,27 @@ export default function CalendarPage() {
                               ${day.isCurrentMonth ? 'bg-white' : 'bg-gray-50'}
                               ${isToday ? 'border-green-500 border-2' : 'border-gray-200'}
                               ${isSelected ? 'ring-2 ring-green-500' : ''}
+                              ${dayBlocked.length > 0 ? 'bg-red-50' : ''}
                               hover:border-gray-400
                             `}
                           >
                             <div className={`text-sm font-medium ${day.isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}`}>
                               {day.date?.getDate()}
                             </div>
+                            {/* Blocked Date Indicators */}
+                            {dayBlocked.length > 0 && (
+                              <div className="mt-1 flex flex-wrap gap-0.5">
+                                {dayBlocked.map((bd, i) => (
+                                  <span
+                                    key={i}
+                                    className={`text-[10px] px-1 rounded ${getInstallerColor(bd.installer_id)}`}
+                                    title={`${getInstallerName(bd.installer_id)}: ${bd.reason || 'Blockerad'} (${bd.slot === 'full' ? 'Heldag' : bd.slot === 'morning' ? 'FM' : 'EM'})`}
+                                  >
+                                    {getInstallerName(bd.installer_id)}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                             {/* Booking Dots */}
                             {dayBookings.length > 0 && (
                               <div className="mt-1 flex flex-wrap gap-1">
@@ -524,7 +636,7 @@ export default function CalendarPage() {
                                   <span className="w-2 h-2 rounded-full bg-green-500" title="Installation" />
                                 )}
                                 {dayBookings.length > 2 && (
-                                  <span className="text-xs text-gray-500">+{dayBookings.length - 2}</span>
+                                  <span className="text-xs text-gray-600">+{dayBookings.length - 2}</span>
                                 )}
                               </div>
                             )}

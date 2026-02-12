@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { isAuthenticated } from '@/lib/supabase-auth';
 import { getQuoteRequest, updateQuoteRequest, deleteQuoteRequest, markQuoteReviewed, markQuoteQuoted } from '@/lib/quotes';
 import type { UpdateQuoteRequestInput } from '@/lib/types/quote';
+import { notifyQuoteUpdated } from '@/lib/discord';
 
 export async function GET(
   request: Request,
@@ -97,6 +98,34 @@ export async function PUT(
 
     // Return the updated quote
     const updatedQuote = await getQuoteRequest(parseInt(id));
+
+    // Send Discord notification on status changes
+    if (body.status !== undefined && updatedQuote) {
+      const parsedAdj = updatedQuote.adjusted_data ? JSON.parse(updatedQuote.adjusted_data) : null;
+      const parsedCalc = updatedQuote.calculation_data ? JSON.parse(updatedQuote.calculation_data) : null;
+      const totalInclVat = parsedAdj?.totals?.totalInclVat || parsedCalc?.totals?.totalInclVat;
+
+      notifyQuoteUpdated({
+        id: parseInt(id),
+        quote_number: updatedQuote.quote_number || undefined,
+        customer_name: updatedQuote.customer_name,
+        total_incl_vat: totalInclVat,
+        change_description: `Status ändrad till "${body.status}" för ${updatedQuote.customer_name}`,
+      }).catch(console.error);
+    }
+
+    // Send Discord notification when adjusted_data is saved
+    if (body.adjusted_data !== undefined && updatedQuote) {
+      const parsedAdj = typeof body.adjusted_data === 'string' ? JSON.parse(body.adjusted_data) : body.adjusted_data;
+      notifyQuoteUpdated({
+        id: parseInt(id),
+        quote_number: updatedQuote.quote_number || undefined,
+        customer_name: updatedQuote.customer_name,
+        total_incl_vat: parsedAdj?.totals?.totalInclVat,
+        change_description: `Offert omräknad för ${updatedQuote.customer_name}`,
+      }).catch(console.error);
+    }
+
     return NextResponse.json({
       success: true,
       quote: updatedQuote ? {

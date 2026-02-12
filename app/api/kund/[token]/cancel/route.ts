@@ -1,26 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { autoAssignInstallers } from '@/lib/auto-assign';
-import { notifyBookingRescheduled } from '@/lib/discord';
+import { notifyBookingCancelled } from '@/lib/discord';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// POST - Reschedule booking (lookup via quote's customer_token)
+// POST - Customer cancels a booking
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
   try {
     const { token } = await params;
-    const body = await request.json();
-    const { new_date } = body;
-
-    if (!new_date) {
-      return NextResponse.json({ error: 'Nytt datum krävs' }, { status: 400 });
-    }
 
     // Find quote by customer token
     const { data: quote, error: quoteError } = await supabaseAdmin
@@ -47,48 +40,17 @@ export async function POST(
       return NextResponse.json({ error: 'Bokning ej hittad' }, { status: 404 });
     }
 
-    if (booking.status !== 'scheduled' && booking.status !== 'confirmed') {
-      return NextResponse.json({ error: 'Bokningen kan inte ändras' }, { status: 400 });
+    if (booking.status === 'cancelled' || booking.status === 'completed') {
+      return NextResponse.json({ error: 'Bokningen kan inte avbokas' }, { status: 400 });
     }
 
-    // Check reschedule window
-    const { data: companyInfo } = await supabaseAdmin
-      .from('company_info')
-      .select('reschedule_days_before')
-      .limit(1)
-      .single();
-
-    const rescheduleDaysBefore = companyInfo?.reschedule_days_before || 7;
-    const daysUntil = Math.ceil(
-      (new Date(booking.scheduled_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-    );
-
-    if (daysUntil < rescheduleDaysBefore) {
-      return NextResponse.json(
-        { error: `Ombokning måste ske minst ${rescheduleDaysBefore} dagar innan` },
-        { status: 400 }
-      );
-    }
-
-    const oldDate = booking.scheduled_date;
-
-    // Update booking date and reset status
+    // Update booking status to cancelled
     await supabaseAdmin
       .from('bookings')
-      .update({
-        scheduled_date: new_date,
-        status: 'scheduled',
-        updated_at: new Date().toISOString(),
-      })
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
       .eq('id', booking.id);
 
-    // Remove current installer assignments
-    await supabaseAdmin
-      .from('booking_installers')
-      .delete()
-      .eq('booking_id', booking.id);
-
-    // Complete/cancel all pending tasks for this booking
+    // Complete all pending tasks for this booking
     await supabaseAdmin
       .from('tasks')
       .update({ status: 'completed', completed_at: new Date().toISOString() })
@@ -103,23 +65,18 @@ export async function POST(
       .eq('status', 'pending');
 
     // Send Discord notification
-    notifyBookingRescheduled({
+    notifyBookingCancelled({
       id: booking.id,
       customer_name: quote.customer_name || 'Kund',
-      old_date: oldDate,
-      new_date,
+      scheduled_date: booking.scheduled_date,
     }).catch(console.error);
-
-    // Auto-assign new installers for the new date
-    autoAssignInstallers(booking.id).catch(console.error);
 
     return NextResponse.json({
       success: true,
-      message: 'Bokningen har ombokats',
-      new_date,
+      message: 'Bokningen har avbokats',
     });
   } catch (err) {
-    console.error('Reschedule POST error:', err);
+    console.error('Cancel POST error:', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }

@@ -641,6 +641,78 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
+                  {/* Crew Settings */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4 text-orange-700">Besättningsinställningar</h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b pb-3">
+                        <div>
+                          <div className="font-medium text-gray-800">Standard antal installatörer</div>
+                          <div className="text-sm text-gray-600">Antal som tilldelas nya bokningar</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="1"
+                            max="5"
+                            step="1"
+                            defaultValue={(() => {
+                              const current = settings.find(s => s.key === 'crew_settings');
+                              return (current?.value as Record<string, number>)?.default_installers ?? 2;
+                            })()}
+                            onBlur={(e) => {
+                              const val = parseInt(e.target.value);
+                              if (!isNaN(val)) {
+                                const current = settings.find(s => s.key === 'crew_settings');
+                                updateSetting('crew_settings', {
+                                  ...(current?.value as Record<string, unknown>),
+                                  default_installers: val,
+                                });
+                              }
+                            }}
+                            className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-gray-900"
+                          />
+                          <span className="text-gray-700">st</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between border-b pb-3">
+                        <div>
+                          <div className="font-medium text-gray-800">Ensam-installatör-tillägg</div>
+                          <div className="text-sm text-gray-600">Extra tid när bara 1 installatör arbetar</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="5"
+                            defaultValue={(() => {
+                              const current = settings.find(s => s.key === 'crew_settings');
+                              return (current?.value as Record<string, number>)?.single_installer_factor ?? 30;
+                            })()}
+                            onBlur={(e) => {
+                              const val = parseInt(e.target.value);
+                              if (!isNaN(val)) {
+                                const current = settings.find(s => s.key === 'crew_settings');
+                                updateSetting('crew_settings', {
+                                  ...(current?.value as Record<string, unknown>),
+                                  single_installer_factor: val,
+                                });
+                              }
+                            }}
+                            className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-gray-900"
+                          />
+                          <span className="text-gray-700">%</span>
+                        </div>
+                      </div>
+                      <div className="p-3 bg-orange-50 rounded-lg">
+                        <p className="text-sm text-orange-800">
+                          <strong>Exempel:</strong> Med 30% tillägg tar en ensam installatör 1.3× så lång tid (och kostar mer i arbetstid).
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Travel */}
                   <div>
                     <h3 className="text-lg font-semibold mb-4 text-purple-700">Transport & Resa</h3>
@@ -909,6 +981,47 @@ export default function SettingsPage() {
                                   className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 text-gray-900"
                                 />
                                 <span className="text-gray-600 text-sm w-16">{variable.variable_unit}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* BBR U-values */}
+                      <div>
+                        <h3 className="text-lg font-semibold mb-3 text-teal-700">Krav U-värden (BBR)</h3>
+                        <p className="text-sm text-gray-600 mb-3">Byggreglernas krav på maximalt U-värde per byggnadsdel.</p>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          {[
+                            { key: 'yttervagg', label: 'Yttervägg', default: 0.18 },
+                            { key: 'tak', label: 'Tak', default: 0.13 },
+                            { key: 'golv', label: 'Golv', default: 0.15 },
+                          ].map((item) => (
+                            <div key={item.key} className="flex items-center justify-between border-b pb-3">
+                              <div className="font-medium text-gray-800">{item.label}</div>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0.01"
+                                  max="1"
+                                  defaultValue={(() => {
+                                    const current = settings.find(s => s.key === 'bbr_u_values');
+                                    return (current?.value as Record<string, number>)?.[item.key] ?? item.default;
+                                  })()}
+                                  onBlur={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    if (!isNaN(val)) {
+                                      const current = settings.find(s => s.key === 'bbr_u_values');
+                                      updateSetting('bbr_u_values', {
+                                        ...(current?.value as Record<string, unknown>),
+                                        [item.key]: val,
+                                      });
+                                    }
+                                  }}
+                                  className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 text-gray-900"
+                                />
+                                <span className="text-gray-600 text-sm">W/(m²·K)</span>
                               </div>
                             </div>
                           ))}

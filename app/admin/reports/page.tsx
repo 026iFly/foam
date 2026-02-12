@@ -15,6 +15,8 @@ interface ReportRow {
   customer_name: string;
   customer_address: string;
   hours: number;
+  actual_hours: number | null;
+  debitable_hours: number | null;
   rate: number;
   amount: number;
   is_lead: boolean;
@@ -171,6 +173,9 @@ export default function ReportsPage() {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Kund</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Adress</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 uppercase">Timmar</th>
+                    {report.rows.some(r => r.debitable_hours != null) && (
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 uppercase">Fakturerbara</th>
+                    )}
                     {report.installer.type === 'subcontractor' && (
                       <>
                         <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 uppercase">Timpris</th>
@@ -188,6 +193,11 @@ export default function ReportsPage() {
                       <td className="px-4 py-3 text-sm">{row.customer_name}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{row.customer_address}</td>
                       <td className="px-4 py-3 text-sm text-right">{row.hours}h</td>
+                      {report.rows.some(r => r.debitable_hours != null) && (
+                        <td className="px-4 py-3 text-sm text-right">
+                          {row.debitable_hours != null ? `${row.debitable_hours}h` : '-'}
+                        </td>
+                      )}
                       {report.installer.type === 'subcontractor' && (
                         <>
                           <td className="px-4 py-3 text-sm text-right">{row.rate} kr</td>

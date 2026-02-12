@@ -70,6 +70,13 @@ export default function CustomerPortalPage() {
   const [showReschedule, setShowReschedule] = useState(false);
   const [rescheduling, setRescheduling] = useState(false);
 
+  // Cancel state
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  // Calendar state
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+
   // ROT form state
   const [showRotForm, setShowRotForm] = useState(false);
   const [rotFastighetsbeteckning, setRotFastighetsbeteckning] = useState('');
@@ -185,6 +192,146 @@ export default function CustomerPortalPage() {
     } finally {
       setRescheduling(false);
     }
+  };
+
+  const handleCancel = async () => {
+    setCancelling(true);
+    try {
+      const res = await fetch(`/api/kund/${token}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        setError(result.error);
+        return;
+      }
+      setShowCancelConfirm(false);
+      fetchBooking();
+    } catch {
+      setError('Avbokning misslyckades');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  // Calendar helpers for month-view date picker
+  const getCalendarWeeks = () => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    let startDow = firstDay.getDay() - 1;
+    if (startDow < 0) startDow = 6;
+
+    const weeks: Array<Array<{ date: Date; dateStr: string; isCurrentMonth: boolean }>> = [];
+    let week: Array<{ date: Date; dateStr: string; isCurrentMonth: boolean }> = [];
+
+    for (let i = 0; i < startDow; i++) {
+      const d = new Date(year, month, 1 - (startDow - i));
+      week.push({ date: d, dateStr: d.toISOString().split('T')[0], isCurrentMonth: false });
+    }
+    for (let day = 1; day <= lastDay.getDate(); day++) {
+      const d = new Date(year, month, day);
+      week.push({ date: d, dateStr: d.toISOString().split('T')[0], isCurrentMonth: true });
+      if (week.length === 7) { weeks.push(week); week = []; }
+    }
+    if (week.length > 0) {
+      let nextDay = 1;
+      while (week.length < 7) {
+        const d = new Date(year, month + 1, nextDay++);
+        week.push({ date: d, dateStr: d.toISOString().split('T')[0], isCurrentMonth: false });
+      }
+      weeks.push(week);
+    }
+    return weeks;
+  };
+
+  const navigateCalendar = (dir: 'prev' | 'next') => {
+    setCalendarMonth(prev => {
+      const m = new Date(prev);
+      m.setMonth(m.getMonth() + (dir === 'next' ? 1 : -1));
+      return m;
+    });
+  };
+
+  const renderCalendarPicker = (onConfirm: () => void, confirmLabel: string, isConfirming: boolean, onCancel: () => void) => {
+    const weeks = getCalendarWeeks();
+    const availableSet = new Set(availableDates);
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    return (
+      <div className="space-y-3">
+        {/* Month navigation */}
+        <div className="flex items-center justify-between">
+          <button onClick={() => navigateCalendar('prev')} className="p-1 hover:bg-gray-100 rounded text-gray-700">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+          </button>
+          <span className="text-sm font-medium text-gray-900 capitalize">
+            {calendarMonth.toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' })}
+          </span>
+          <button onClick={() => navigateCalendar('next')} className="p-1 hover:bg-gray-100 rounded text-gray-700">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+          </button>
+        </div>
+        {/* Day headers */}
+        <div className="grid grid-cols-7 gap-1">
+          {['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'].map(d => (
+            <div key={d} className="text-center text-xs font-medium text-gray-600 py-1">{d}</div>
+          ))}
+        </div>
+        {/* Days grid */}
+        <div className="space-y-1">
+          {weeks.map((week, wi) => (
+            <div key={wi} className="grid grid-cols-7 gap-1">
+              {week.map((day, di) => {
+                const isAvailable = availableSet.has(day.dateStr);
+                const isSelected = selectedDate === day.dateStr;
+                const isPast = day.dateStr < todayStr;
+                return (
+                  <button
+                    key={di}
+                    onClick={() => isAvailable && setSelectedDate(day.dateStr)}
+                    disabled={!isAvailable || isPast}
+                    className={`
+                      h-10 rounded text-sm transition
+                      ${!day.isCurrentMonth ? 'text-gray-300' : ''}
+                      ${isSelected ? 'bg-blue-600 text-white font-bold' : ''}
+                      ${isAvailable && !isSelected ? 'bg-green-50 text-green-800 hover:bg-green-100 font-medium' : ''}
+                      ${!isAvailable && day.isCurrentMonth && !isPast ? 'text-gray-300' : ''}
+                      ${isPast && day.isCurrentMonth ? 'text-gray-300' : ''}
+                      ${!isAvailable ? 'cursor-default' : 'cursor-pointer'}
+                    `}
+                  >
+                    {day.date.getDate()}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+        {selectedDate && (
+          <p className="text-sm text-gray-900 font-medium text-center">
+            Valt datum: {formatDate(selectedDate)}
+          </p>
+        )}
+        <div className="flex gap-2">
+          <button
+            onClick={onConfirm}
+            disabled={!selectedDate || isConfirming}
+            className="flex-1 bg-blue-600 text-white rounded-lg py-3 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+          >
+            {isConfirming ? 'Vänta...' : confirmLabel}
+          </button>
+          <button
+            onClick={onCancel}
+            className="px-4 bg-gray-100 text-gray-700 rounded-lg py-3 text-sm hover:bg-gray-200"
+          >
+            Avbryt
+          </button>
+        </div>
+      </div>
+    );
   };
 
   // ROT form handlers
@@ -400,34 +547,7 @@ export default function CustomerPortalPage() {
             {loadingSlots ? (
               <p className="text-sm text-gray-700">Hämtar tillgängliga datum...</p>
             ) : availableDates.length > 0 ? (
-              <div className="space-y-3">
-                <select
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-900"
-                >
-                  <option value="">Välj datum...</option>
-                  {availableDates.map((d) => (
-                    <option key={d} value={d}>{formatDate(d)}</option>
-                  ))}
-                </select>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleBookDate}
-                    disabled={!selectedDate || booking}
-                    className="flex-1 bg-blue-600 text-white rounded-lg py-3 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {booking ? 'Bokar...' : 'Bekräfta datum'}
-                  </button>
-                  <button
-                    onClick={() => setShowDatePicker(false)}
-                    className="px-4 bg-gray-100 text-gray-700 rounded-lg py-3 text-sm hover:bg-gray-200"
-                  >
-                    Avbryt
-                  </button>
-                </div>
-              </div>
+              renderCalendarPicker(handleBookDate, booking ? 'Bokar...' : 'Bekräfta datum', booking, () => setShowDatePicker(false))
             ) : (
               <p className="text-sm text-gray-700">Inga tillgängliga datum just nu. Kontakta oss för hjälp.</p>
             )}
@@ -735,36 +855,47 @@ export default function CustomerPortalPage() {
             {loadingSlots ? (
               <p className="text-sm text-gray-700">Hämtar tillgängliga datum...</p>
             ) : availableDates.length > 0 ? (
-              <div className="space-y-3">
-                <select
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-900"
-                >
-                  <option value="">Välj datum...</option>
-                  {availableDates.map((d) => (
-                    <option key={d} value={d}>{formatDate(d)}</option>
-                  ))}
-                </select>
+              renderCalendarPicker(handleReschedule, rescheduling ? 'Ombokar...' : 'Bekräfta ombokning', rescheduling, () => setShowReschedule(false))
+            ) : (
+              <p className="text-sm text-gray-700">Inga tillgängliga datum just nu. Kontakta oss för hjälp.</p>
+            )}
+          </div>
+        )}
 
+        {/* Cancel Booking */}
+        {has_booking && bookingInfo && bookingInfo.status !== 'cancelled' && bookingInfo.status !== 'completed' && (
+          <div className="bg-white rounded-lg shadow p-6">
+            {!showCancelConfirm ? (
+              <button
+                onClick={() => setShowCancelConfirm(true)}
+                className="w-full text-red-600 text-sm font-medium hover:text-red-800"
+              >
+                Avboka installation
+              </button>
+            ) : (
+              <div className="space-y-3">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-sm font-medium text-red-800 mb-2">Vill du verkligen avboka?</p>
+                  <p className="text-xs text-red-700">
+                    Vid avbokning kan du inte ångra beslutet. Kontakta oss om du vill boka om istället.
+                  </p>
+                </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={handleReschedule}
-                    disabled={!selectedDate || rescheduling}
-                    className="flex-1 bg-blue-600 text-white rounded-lg py-3 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+                    onClick={handleCancel}
+                    disabled={cancelling}
+                    className="flex-1 bg-red-600 text-white rounded-lg py-3 text-sm font-medium hover:bg-red-700 disabled:opacity-50"
                   >
-                    {rescheduling ? 'Ombokar...' : 'Bekräfta ombokning'}
+                    {cancelling ? 'Avbokar...' : 'Ja, avboka'}
                   </button>
                   <button
-                    onClick={() => setShowReschedule(false)}
-                    className="px-4 bg-gray-100 text-gray-700 rounded-lg py-3 text-sm hover:bg-gray-200"
+                    onClick={() => setShowCancelConfirm(false)}
+                    className="flex-1 bg-gray-100 text-gray-700 rounded-lg py-3 text-sm hover:bg-gray-200"
                   >
-                    Avbryt
+                    Nej, behåll
                   </button>
                 </div>
               </div>
-            ) : (
-              <p className="text-sm text-gray-700">Inga tillgängliga datum just nu. Kontakta oss för hjälp.</p>
             )}
           </div>
         )}

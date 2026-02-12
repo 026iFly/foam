@@ -109,6 +109,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Default num_installers: 1 for home visits, 2 for installations
+    const defaultInstallers = booking_type === 'visit' ? 1 : 2;
+
     // Create the booking
     const { data: booking, error } = await supabaseAdmin
       .from('bookings')
@@ -119,7 +122,7 @@ export async function POST(request: NextRequest) {
         scheduled_time: scheduled_time || null,
         status: 'scheduled',
         notes: notes || null,
-        num_installers: num_installers || 2,
+        num_installers: num_installers || defaultInstallers,
         slot_type: slot_type || 'full',
         customer_token: crypto.randomUUID(),
       })

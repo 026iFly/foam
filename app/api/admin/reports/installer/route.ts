@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     const { data: assignments } = await supabaseAdmin
       .from('booking_installers')
       .select(`
-        is_lead,
+        is_lead, actual_hours, debitable_hours,
         bookings!inner (
           id, scheduled_date, status, num_installers,
           quote_requests (
@@ -85,16 +85,21 @@ export async function GET(request: NextRequest) {
         totalHours = parsed?.totals?.totalHours || 0;
       }
 
-      const hoursPerInstaller = totalHours / Math.max(booking.num_installers || 2, 1);
+      // Use debitable_hours if set (overbooking scenario), else actual_hours, else calculated
+      const calculatedHours = totalHours / Math.max(booking.num_installers || 2, 1);
+      const actualHours = a.actual_hours ?? calculatedHours;
+      const debitableHours = a.debitable_hours ?? calculatedHours;
       const rate = installer.hourly_rate || 0;
-      const amount = hoursPerInstaller * rate;
+      const amount = debitableHours * rate;
 
       return {
         date: booking.scheduled_date,
         booking_id: booking.id,
         customer_name: quoteData?.customer_name || '-',
         customer_address: quoteData?.customer_address || '-',
-        hours: Math.round(hoursPerInstaller * 10) / 10,
+        hours: Math.round(calculatedHours * 10) / 10,
+        actual_hours: a.actual_hours != null ? Math.round(actualHours * 10) / 10 : null,
+        debitable_hours: a.debitable_hours != null ? Math.round(debitableHours * 10) / 10 : null,
         rate,
         amount: Math.round(amount),
         is_lead: a.is_lead,

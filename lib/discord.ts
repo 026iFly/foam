@@ -3,6 +3,13 @@
  * Sends notifications to Discord channel
  */
 
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 
 interface DiscordEmbed {
@@ -39,9 +46,13 @@ const COLORS = {
 /**
  * Send a message to Discord
  */
-export async function sendDiscordNotification(message: DiscordMessage): Promise<boolean> {
+export async function sendDiscordNotification(
+  message: DiscordMessage,
+  logMeta?: { event_type?: string; reference_type?: string; reference_id?: number }
+): Promise<boolean> {
   if (!DISCORD_WEBHOOK_URL) {
     console.warn('Discord webhook URL not configured');
+    await logDiscordNotification(logMeta?.event_type || 'unknown', 'skipped', 'Webhook not configured', logMeta);
     return false;
   }
 
@@ -58,14 +69,39 @@ export async function sendDiscordNotification(message: DiscordMessage): Promise<
     });
 
     if (!response.ok) {
-      console.error('Discord webhook error:', response.status, await response.text());
+      const errorText = await response.text();
+      console.error('Discord webhook error:', response.status, errorText);
+      await logDiscordNotification(logMeta?.event_type || 'unknown', 'failed', `HTTP ${response.status}: ${errorText}`, logMeta);
       return false;
     }
 
+    await logDiscordNotification(logMeta?.event_type || 'custom', 'sent', undefined, logMeta);
     return true;
   } catch (error) {
     console.error('Discord notification error:', error);
+    await logDiscordNotification(logMeta?.event_type || 'unknown', 'failed', String(error), logMeta);
     return false;
+  }
+}
+
+async function logDiscordNotification(
+  event_type: string,
+  status: string,
+  error_message?: string,
+  meta?: { reference_type?: string; reference_id?: number }
+) {
+  try {
+    await supabaseAdmin.from('notification_log').insert({
+      channel: 'discord',
+      event_type,
+      recipient: 'webhook',
+      reference_type: meta?.reference_type,
+      reference_id: meta?.reference_id,
+      status,
+      error_message: error_message || null,
+    });
+  } catch (err) {
+    console.error('Failed to log discord notification:', err);
   }
 }
 
@@ -249,6 +285,88 @@ export async function notifyInstallationBooked(booking: {
         { name: 'Datum', value: formattedDate, inline: true },
         { name: 'Adress', value: booking.customer_address, inline: true },
       ],
+      timestamp: new Date().toISOString(),
+    }],
+  });
+}
+
+/**
+ * Notify about a rescheduled booking
+ */
+export async function notifyBookingRescheduled(booking: {
+  id: number;
+  customer_name: string;
+  old_date: string;
+  new_date: string;
+}): Promise<boolean> {
+  const oldFormatted = new Date(booking.old_date).toLocaleDateString('sv-SE', {
+    weekday: 'long', day: 'numeric', month: 'long',
+  });
+  const newFormatted = new Date(booking.new_date).toLocaleDateString('sv-SE', {
+    weekday: 'long', day: 'numeric', month: 'long',
+  });
+
+  return sendDiscordNotification({
+    embeds: [{
+      title: 'Bokning ombokad',
+      description: `${booking.customer_name} har ombokat sin installation`,
+      color: COLORS.warning,
+      fields: [
+        { name: 'Tidigare datum', value: oldFormatted, inline: true },
+        { name: 'Nytt datum', value: newFormatted, inline: true },
+      ],
+      footer: { text: `Bokning #${booking.id}` },
+      timestamp: new Date().toISOString(),
+    }],
+  });
+}
+
+/**
+ * Notify about a cancelled booking
+ */
+export async function notifyBookingCancelled(booking: {
+  id: number;
+  customer_name: string;
+  scheduled_date: string;
+}): Promise<boolean> {
+  return sendDiscordNotification({
+    embeds: [{
+      title: 'Bokning avbokad',
+      description: `${booking.customer_name} har avbokat sin installation`,
+      color: COLORS.error,
+      fields: [
+        { name: 'Datum', value: new Date(booking.scheduled_date).toLocaleDateString('sv-SE'), inline: true },
+      ],
+      footer: { text: `Bokning #${booking.id}` },
+      timestamp: new Date().toISOString(),
+    }],
+  });
+}
+
+/**
+ * Notify about a quote update/recalculation
+ */
+export async function notifyQuoteUpdated(quote: {
+  id: number;
+  quote_number?: string;
+  customer_name: string;
+  total_incl_vat?: number;
+  change_description?: string;
+}): Promise<boolean> {
+  const value = quote.total_incl_vat
+    ? new Intl.NumberFormat('sv-SE', { style: 'currency', currency: 'SEK', maximumFractionDigits: 0 }).format(quote.total_incl_vat)
+    : 'Ej beräknat';
+
+  return sendDiscordNotification({
+    embeds: [{
+      title: 'Offert uppdaterad',
+      description: quote.change_description || `Offert för ${quote.customer_name} har uppdaterats`,
+      color: COLORS.info,
+      fields: [
+        { name: 'Offertnummer', value: quote.quote_number || `#${quote.id}`, inline: true },
+        { name: 'Nytt värde', value: value, inline: true },
+      ],
+      footer: { text: `Offert #${quote.id}` },
       timestamp: new Date().toISOString(),
     }],
   });

@@ -8,12 +8,35 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+interface ReminderSettings {
+  first_reminder_days: number;
+  second_reminder_days: number;
+  max_reminders: number;
+  reminder_interval_days: number;
+}
+
+async function getReminderSettings(): Promise<ReminderSettings> {
+  const { data } = await supabaseAdmin
+    .from('system_settings')
+    .select('value')
+    .eq('key', 'reminder_settings')
+    .single();
+
+  const defaults: ReminderSettings = {
+    first_reminder_days: 3,
+    second_reminder_days: 5,
+    max_reminders: 3,
+    reminder_interval_days: 3,
+  };
+
+  if (!data?.value) return defaults;
+  const val = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+  return { ...defaults, ...val };
+}
+
 /**
  * Cron job: Send reminders for unsigned offers
  * Runs daily at 09:00 CET
- *
- * - Sends follow-up email 3 days after offer was sent
- * - Sends Discord notification for offers older than 5 days without response
  */
 export async function GET(request: Request) {
   // Verify cron auth
@@ -32,15 +55,12 @@ export async function GET(request: Request) {
 
   try {
     const now = new Date();
+    const settings = await getReminderSettings();
 
-    // 1. Find offers sent 3 days ago that haven't been responded to (for follow-up email)
-    const threeDaysAgo = new Date(now);
-    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-    const threeDaysAgoDate = threeDaysAgo.toISOString().split('T')[0];
-
+    // Find all sent offers that haven't been responded to
     const { data: offersForFollowUp } = await supabaseAdmin
       .from('quote_requests')
-      .select('id, customer_name, customer_email, quote_number, quote_valid_until, offer_token, email_sent_at')
+      .select('id, customer_name, customer_email, quote_number, quote_valid_until, offer_token, email_sent_at, reminder_count, last_reminder_at')
       .eq('status', 'sent')
       .not('offer_token', 'is', null)
       .not('email_sent_at', 'is', null)
@@ -50,11 +70,36 @@ export async function GET(request: Request) {
     for (const offer of offersForFollowUp || []) {
       if (!offer.email_sent_at) continue;
 
+      const reminderCount = offer.reminder_count || 0;
+      if (reminderCount >= settings.max_reminders) continue;
+
       const sentDate = new Date(offer.email_sent_at);
       const daysSinceSent = Math.floor((now.getTime() - sentDate.getTime()) / (1000 * 60 * 60 * 24));
 
-      // Send follow-up email exactly on day 3
-      if (daysSinceSent === 3) {
+      // Check if enough time has passed since last reminder
+      if (offer.last_reminder_at) {
+        const lastReminder = new Date(offer.last_reminder_at);
+        const daysSinceLastReminder = Math.floor((now.getTime() - lastReminder.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysSinceLastReminder < settings.reminder_interval_days) continue;
+      }
+
+      let shouldSendEmail = false;
+      let shouldSendDiscord = false;
+
+      if (reminderCount === 0 && daysSinceSent >= settings.first_reminder_days) {
+        shouldSendEmail = true;
+      } else if (reminderCount === 1 && daysSinceSent >= settings.second_reminder_days) {
+        shouldSendDiscord = true;
+      } else if (reminderCount >= 2) {
+        // Alternate between email and Discord for subsequent reminders
+        if (reminderCount % 2 === 0) {
+          shouldSendEmail = true;
+        } else {
+          shouldSendDiscord = true;
+        }
+      }
+
+      if (shouldSendEmail) {
         try {
           await sendFollowUpEmail({
             customer_name: offer.customer_name,
@@ -63,28 +108,46 @@ export async function GET(request: Request) {
             quote_valid_until: offer.quote_valid_until || undefined,
             offer_token: offer.offer_token!,
           });
+
+          await supabaseAdmin
+            .from('quote_requests')
+            .update({
+              reminder_count: reminderCount + 1,
+              last_reminder_at: now.toISOString(),
+            })
+            .eq('id', offer.id);
+
           results.followUpsSent++;
         } catch (err) {
           results.errors.push(`Follow-up email failed for offer #${offer.id}: ${err}`);
         }
       }
 
-      // Discord alert for offers older than 5 days
-      if (daysSinceSent === 5) {
+      if (shouldSendDiscord) {
         try {
           await sendDiscordNotification({
             embeds: [{
-              title: 'Offert utan svar i 5 dagar',
+              title: `Offert utan svar (påminnelse ${reminderCount + 1})`,
               description: `${offer.customer_name} har inte svarat på offert ${offer.quote_number || `#${offer.id}`}`,
               color: 0xeab308,
               fields: [
                 { name: 'Skickad', value: sentDate.toLocaleDateString('sv-SE'), inline: true },
+                { name: 'Dagar sedan', value: `${daysSinceSent} dagar`, inline: true },
                 { name: 'Giltig till', value: offer.quote_valid_until ? new Date(offer.quote_valid_until).toLocaleDateString('sv-SE') : 'Ej satt', inline: true },
               ],
-              footer: { text: 'Överväg att ringa kunden' },
+              footer: { text: `Påminnelse ${reminderCount + 1} av ${settings.max_reminders}` },
               timestamp: new Date().toISOString(),
             }],
           });
+
+          await supabaseAdmin
+            .from('quote_requests')
+            .update({
+              reminder_count: reminderCount + 1,
+              last_reminder_at: now.toISOString(),
+            })
+            .eq('id', offer.id);
+
           results.discordAlerts++;
         } catch (err) {
           results.errors.push(`Discord alert failed for offer #${offer.id}: ${err}`);

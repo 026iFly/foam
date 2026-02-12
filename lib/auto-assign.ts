@@ -165,17 +165,30 @@ export async function sendInstallerNotifications(
 
   const slotLabel = bookingInfo.slot_type === 'morning' ? 'Förmiddag' : bookingInfo.slot_type === 'afternoon' ? 'Eftermiddag' : 'Heldag';
 
+  // Get booking type for correct label
+  const { data: bookingData } = await supabaseAdmin
+    .from('bookings')
+    .select('booking_type, scheduled_time')
+    .eq('id', bookingId)
+    .single();
+
+  const isHomeVisit = bookingData?.booking_type === 'visit';
+  const embedTitle = isHomeVisit ? 'Nytt hembesök att bekräfta' : 'Ny installation att bekräfta';
+
+  const discordFields = [
+    { name: 'Kund', value: bookingInfo.customer_name, inline: true },
+    { name: 'Adress', value: bookingInfo.customer_address, inline: true },
+    { name: 'Datum', value: new Date(bookingInfo.installation_date).toLocaleDateString('sv-SE'), inline: true },
+    { name: 'Tid', value: bookingData?.scheduled_time ? `${bookingData.scheduled_time} (${slotLabel})` : slotLabel, inline: true },
+  ];
+
   sendDiscordNotification({
     embeds: [{
-      title: 'Ny bokning att bekräfta',
+      title: embedTitle,
       description: `${installerName} - väntar på bekräftelse`,
       color: 0xeab308,
-      fields: [
-        { name: 'Kund', value: bookingInfo.customer_name, inline: true },
-        { name: 'Adress', value: bookingInfo.customer_address, inline: true },
-        { name: 'Datum', value: new Date(bookingInfo.installation_date).toLocaleDateString('sv-SE'), inline: true },
-        { name: 'Tid', value: slotLabel, inline: true },
-      ],
+      fields: discordFields,
+      footer: { text: `Token: ${discordToken}` },
     }],
   }).catch(console.error);
 

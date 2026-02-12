@@ -106,6 +106,25 @@ export async function POST(
     const { vars, physicsVars } = await getCostVariables();
     const multipliers = await getProjectMultipliers();
 
+    // Load crew settings and BBR U-values from system_settings
+    const { data: crewSettingsRow } = await supabase
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'crew_settings')
+      .single();
+    const crewSettings = crewSettingsRow?.value
+      ? (typeof crewSettingsRow.value === 'string' ? JSON.parse(crewSettingsRow.value) : crewSettingsRow.value)
+      : { default_installers: 2, single_installer_factor: 30 };
+
+    const { data: bbrRow } = await supabase
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'bbr_u_values')
+      .single();
+    const customBBR = bbrRow?.value
+      ? (typeof bbrRow.value === 'string' ? JSON.parse(bbrRow.value) : bbrRow.value)
+      : null;
+
     // Get foam properties with DB overrides
     const foamProps = getFoamProperties(physicsVars);
     const safetyMargin = physicsVars.condensation_safety_margin ?? DEFAULT_SAFETY_MARGIN;
@@ -246,7 +265,7 @@ export async function POST(
       const partTypeKey = part.partType === 'tak' ? 'tak' :
         part.partType === 'yttervagg' ? 'yttervagg' :
         part.partType === 'golv' ? 'golv' : 'tak';
-      const requiredUValue = BBR_U_VALUES[partTypeKey as keyof typeof BBR_U_VALUES] || 0.13;
+      const requiredUValue = customBBR?.[partTypeKey] ?? BBR_U_VALUES[partTypeKey as keyof typeof BBR_U_VALUES] ?? 0.13;
       const meetsUValue = actualUValue <= requiredUValue;
 
       recalculatedParts.push({
@@ -278,11 +297,22 @@ export async function POST(
       });
     }
 
+    // Apply single-installer factor if applicable
+    // Check booking for num_installers (passed via options or from booking)
+    const numInstallers = (options as Record<string, unknown>).num_installers
+      ? Number((options as Record<string, unknown>).num_installers)
+      : crewSettings.default_installers ?? 2;
+    const singleFactor = crewSettings.single_installer_factor ?? 30;
+    let adjustedSprayHours = totalSprayHours;
+    if (numInstallers === 1) {
+      adjustedSprayHours = totalSprayHours * (1 + singleFactor / 100);
+    }
+
     // Calculate shared costs
     const setupHours = vars.setup_hours || 2;
     const travelHours = 0; // Would need distance calculation
     const switchingHours = recalculatedParts.filter(p => p.configType === 'flash_and_batt').length * 1.0;
-    const totalLaborHours = totalSprayHours + setupHours + travelHours + switchingHours;
+    const totalLaborHours = adjustedSprayHours + setupHours + travelHours + switchingHours;
     const totalLaborCost = totalLaborHours * vars.personnel_cost_per_hour;
 
     // Distribute labor cost proportionally to spray hours

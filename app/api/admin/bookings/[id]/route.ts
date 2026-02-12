@@ -161,6 +161,42 @@ export async function PUT(
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    // Check for overbooking
+    if (status !== 'cancelled') {
+      const { data: assignments } = await supabaseAdmin
+        .from('booking_installers')
+        .select('installer_id')
+        .eq('booking_id', bookingId)
+        .neq('status', 'declined');
+
+      const assignedCount = assignments?.length || 0;
+      const numInstallers = booking.num_installers || existingBooking.num_installers || 2;
+
+      if (assignedCount > numInstallers && !existingBooking.overbooking_resolved) {
+        // Create admin task for distributing debitable hours
+        const { data: existingTask } = await supabaseAdmin
+          .from('tasks')
+          .select('id')
+          .eq('booking_id', bookingId)
+          .like('title', '%fakturerbara timmar%')
+          .eq('status', 'pending')
+          .single();
+
+        if (!existingTask) {
+          await supabaseAdmin
+            .from('tasks')
+            .insert({
+              title: 'Fördela fakturerbara timmar',
+              description: `Bokning #${bookingId} har ${assignedCount} installatörer men ${numInstallers} beräknade. Fördela fakturerbara timmar.`,
+              status: 'pending',
+              priority: 'high',
+              booking_id: bookingId,
+              task_type: 'custom',
+            });
+        }
+      }
+    }
+
     // Sync to Google Calendar if configured
     if (isGoogleCalendarConfigured()) {
       try {

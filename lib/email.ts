@@ -36,11 +36,15 @@ interface EmailOptions {
 /**
  * Send an email
  */
-export async function sendEmail(options: EmailOptions): Promise<boolean> {
+export async function sendEmail(
+  options: EmailOptions,
+  logMeta?: { event_type?: string; reference_type?: string; reference_id?: number }
+): Promise<boolean> {
   const fromAddress = process.env.SMTP_FROM || process.env.SMTP_USER;
 
   if (!fromAddress) {
     console.error('SMTP_FROM or SMTP_USER not configured');
+    await logNotification('email', logMeta?.event_type || 'unknown', options.to, 'failed', 'SMTP not configured', logMeta);
     return false;
   }
 
@@ -60,10 +64,35 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
     });
 
     console.log(`Email sent to ${options.to}: ${options.subject}`);
+    await logNotification('email', logMeta?.event_type || 'custom', options.to, 'sent', undefined, logMeta);
     return true;
   } catch (error) {
     console.error('Email send error:', error);
+    await logNotification('email', logMeta?.event_type || 'custom', options.to, 'failed', String(error), logMeta);
     return false;
+  }
+}
+
+async function logNotification(
+  channel: string,
+  event_type: string,
+  recipient: string,
+  status: string,
+  error_message?: string,
+  meta?: { reference_type?: string; reference_id?: number }
+) {
+  try {
+    await supabaseAdmin.from('notification_log').insert({
+      channel,
+      event_type,
+      recipient,
+      reference_type: meta?.reference_type,
+      reference_id: meta?.reference_id,
+      status,
+      error_message: error_message || null,
+    });
+  } catch (err) {
+    console.error('Failed to log notification:', err);
   }
 }
 
@@ -250,7 +279,7 @@ export async function sendOfferEmail(
     text,
     html: text.replace(/\n/g, '<br>'),
     attachments,
-  });
+  }, { event_type: 'offer_sent', reference_type: 'quote', reference_id: quote.id });
 }
 
 /**
@@ -383,6 +412,7 @@ export async function sendInstallerConfirmationEmail(
     installation_date: string;
     slot_type: string;
     confirm_token: string;
+    booking_type?: string;
   }
 ): Promise<boolean> {
   const template = await getTemplate('installer_confirmation');
@@ -395,6 +425,8 @@ export async function sendInstallerConfirmationEmail(
   const confirmLink = `${baseUrl}/confirm/${booking.confirm_token}`;
 
   const slotLabel = booking.slot_type === 'morning' ? 'Förmiddag' : booking.slot_type === 'afternoon' ? 'Eftermiddag' : 'Heldag';
+  const isHomeVisit = booking.booking_type === 'visit';
+  const bookingTypeLabel = isHomeVisit ? 'hembesök' : 'installation';
 
   const variables = {
     installer_name: installer.name,
@@ -406,17 +438,26 @@ export async function sendInstallerConfirmationEmail(
     slot_type: slotLabel,
     confirm_link: confirmLink,
     company_name: 'Intellifoam',
+    booking_type: bookingTypeLabel,
   };
 
-  const subject = replaceTemplateVariables(template.subject, variables);
-  const text = replaceTemplateVariables(template.body, variables);
+  // Override subject for home visits
+  const subjectTemplate = isHomeVisit
+    ? 'Nytt hembesök att bekräfta - {{customer_name}}'
+    : template.subject;
+
+  const subject = replaceTemplateVariables(subjectTemplate, variables);
+  const bodyTemplate = isHomeVisit
+    ? template.body.replace('en ny installation', 'ett nytt hembesök')
+    : template.body;
+  const text = replaceTemplateVariables(bodyTemplate, variables);
 
   return sendEmail({
     to: installer.email,
     subject,
     text,
     html: text.replace(/\n/g, '<br>'),
-  });
+  }, { event_type: 'installer_confirmation' });
 }
 
 /**

@@ -67,12 +67,20 @@ export default async function AdminLayout({
                   Inställningar
                 </Link>
                 {isAdmin && (
-                  <Link
-                    href="/admin/users"
-                    className="text-sm text-gray-600 hover:text-gray-900"
-                  >
-                    Användare
-                  </Link>
+                  <>
+                    <Link
+                      href="/admin/users"
+                      className="text-sm text-gray-600 hover:text-gray-900"
+                    >
+                      Användare
+                    </Link>
+                    <Link
+                      href="/admin/diagnostics"
+                      className="text-sm text-gray-600 hover:text-gray-900"
+                    >
+                      Diagnostik
+                    </Link>
+                  </>
                 )}
               </nav>
             </div>
@@ -153,12 +161,20 @@ export default async function AdminLayout({
             Inställningar
           </Link>
           {isAdmin && (
-            <Link
-              href="/admin/users"
-              className="text-sm text-gray-600 hover:text-gray-900 whitespace-nowrap"
-            >
-              Användare
-            </Link>
+            <>
+              <Link
+                href="/admin/users"
+                className="text-sm text-gray-600 hover:text-gray-900 whitespace-nowrap"
+              >
+                Användare
+              </Link>
+              <Link
+                href="/admin/diagnostics"
+                className="text-sm text-gray-600 hover:text-gray-900 whitespace-nowrap"
+              >
+                Diagnostik
+              </Link>
+            </>
           )}
           <Link
             href="/admin/profile"
