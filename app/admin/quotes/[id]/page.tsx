@@ -72,12 +72,13 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
     status: string;
     installers?: Array<{
       installer_id: string;
-      first_name: string;
-      last_name: string;
+      name: string;
       is_lead: boolean;
       status: string;
+      responded_at?: string | null;
     }>;
   }>>([]);
+  const [overridingInstaller, setOverridingInstaller] = useState<{bookingId: number; installerId: string} | null>(null);
   const [selectedInstallerIds, setSelectedInstallerIds] = useState<string[]>([]);
   const [leadInstallerId, setLeadInstallerId] = useState<string | undefined>();
   const [assigningBookingId, setAssigningBookingId] = useState<number | null>(null);
@@ -223,6 +224,26 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
       console.error('Error assigning installers:', err);
     }
     setSavingAssignment(false);
+  };
+
+  const handleInstallerOverride = async (bookingId: number, installerId: string, action: 'accept' | 'decline') => {
+    setOverridingInstaller({ bookingId, installerId });
+    try {
+      const res = await fetch(`/api/admin/bookings/${bookingId}/installer-override`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ installerId, action }),
+      });
+      if (res.ok) {
+        fetchBookings();
+      } else {
+        const err = await res.json();
+        alert(`Fel: ${err.error || 'Kunde inte uppdatera'}`);
+      }
+    } catch (err) {
+      console.error('Override error:', err);
+    }
+    setOverridingInstaller(null);
   };
 
   const openEditBooking = (booking: { id: number; scheduled_date: string; scheduled_time: string }) => {
@@ -1316,25 +1337,71 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                             </div>
                           </div>
                           {/* Assigned Installers */}
-                          {booking.installers && booking.installers.length > 0 && (
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              {booking.installers.map((inst) => (
-                                <span
-                                  key={inst.installer_id}
-                                  className={`text-xs px-1.5 py-0.5 rounded ${
-                                    inst.status === 'accepted' ? 'bg-green-100 text-green-700'
-                                      : inst.status === 'declined' ? 'bg-red-100 text-red-700'
+                          {booking.installers && booking.installers.length > 0 && (() => {
+                            const active = booking.installers!.filter(i => i.status !== 'declined');
+                            const hasPending = active.some(i => i.status === 'pending');
+                            const hasDeclined = booking.installers!.some(i => i.status === 'declined');
+                            const aggStatus = (booking.status === 'confirmed' || (active.length > 0 && !hasPending))
+                              ? 'accepted'
+                              : (hasDeclined && active.length === 0)
+                              ? 'rejected'
+                              : 'pending';
+                            return (
+                              <div className="mt-2 space-y-1">
+                                {/* Aggregate badge */}
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-gray-600">Installatör:</span>
+                                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                                    aggStatus === 'accepted' ? 'bg-green-100 text-green-700'
+                                      : aggStatus === 'rejected' ? 'bg-red-100 text-red-700'
                                       : 'bg-yellow-100 text-yellow-700'
-                                  }`}
-                                >
-                                  {inst.first_name || inst.last_name
-                                    ? `${inst.first_name || ''} ${inst.last_name ? inst.last_name.charAt(0) + '.' : ''}`.trim()
-                                    : 'Installatör'}
-                                  {inst.is_lead && ' *'}
-                                </span>
-                              ))}
-                            </div>
-                          )}
+                                  }`}>
+                                    {aggStatus === 'accepted' ? 'Alla klara' : aggStatus === 'rejected' ? 'Nekad' : `Väntar ${active.filter(i=>i.status==='pending').length}/${active.length}`}
+                                  </span>
+                                </div>
+                                {/* Per-installer rows */}
+                                {booking.installers!.map((inst) => (
+                                  <div key={inst.installer_id} className="flex items-center gap-1.5 flex-wrap">
+                                    <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                      inst.status === 'accepted' ? 'bg-green-100 text-green-700'
+                                        : inst.status === 'declined' ? 'bg-red-100 text-red-700'
+                                        : 'bg-yellow-100 text-yellow-700'
+                                    }`}>
+                                      {inst.name || 'Installatör'}{inst.is_lead && ' *'}
+                                    </span>
+                                    {inst.responded_at && (
+                                      <span className="text-xs text-gray-500">
+                                        {new Date(inst.responded_at).toLocaleString('sv-SE', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                      </span>
+                                    )}
+                                    {/* Admin override buttons */}
+                                    {booking.status !== 'completed' && booking.status !== 'cancelled' && (
+                                      <span className="flex gap-1">
+                                        {inst.status !== 'accepted' && (
+                                          <button
+                                            onClick={() => handleInstallerOverride(booking.id, inst.installer_id, 'accept')}
+                                            disabled={overridingInstaller?.installerId === inst.installer_id}
+                                            className="text-xs text-green-700 hover:text-green-900 underline disabled:opacity-50"
+                                          >
+                                            Force-ok
+                                          </button>
+                                        )}
+                                        {inst.status !== 'declined' && (
+                                          <button
+                                            onClick={() => handleInstallerOverride(booking.id, inst.installer_id, 'decline')}
+                                            disabled={overridingInstaller?.installerId === inst.installer_id}
+                                            className="text-xs text-red-600 hover:text-red-800 underline disabled:opacity-50"
+                                          >
+                                            Force-neka
+                                          </button>
+                                        )}
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })()}
                           {/* Action buttons */}
                           {booking.status !== 'completed' && booking.status !== 'cancelled' && (
                             <div className="mt-1 flex flex-wrap gap-2">

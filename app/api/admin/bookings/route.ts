@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       ? await supabaseAdmin
           .from('booking_installers')
           .select(`
-            booking_id, installer_id, is_lead, status,
+            booking_id, installer_id, is_lead, status, responded_at,
             user_profiles (first_name, last_name)
           `)
           .in('booking_id', bookingIds)
@@ -74,6 +74,7 @@ export async function GET(request: NextRequest) {
           installer_id: a.installer_id,
           is_lead: a.is_lead,
           status: a.status,
+          responded_at: a.responded_at,
           name: `${(a.user_profiles as unknown as { first_name: string; last_name: string })?.first_name || ''} ${(a.user_profiles as unknown as { first_name: string; last_name: string })?.last_name || ''}`.trim(),
         }));
 
