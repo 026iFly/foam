@@ -1,0 +1,136 @@
+{
+  "name": "StorSprut Discord Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "botToken",
+        "resource": "message",
+        "operation": "getAll",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "name": "Discord Trigger",
+      "type": "n8n-nodes-base.discordTrigger",
+      "typeVersion": 2,
+      "position": [-100, 260],
+      "webhookId": "storsprut-discord-trigger"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "Du är StorSprut, en hjälpsam assistent för Intellifoam - ett företag som installerar sprayisolering (PUR-skum).\n\nDu hjälper teamet via Discord att:\n- Se dagens och kommande bokningar\n- Söka efter kunder och offerter\n- Hantera uppgifter (lista, skapa, avsluta)\n- Kolla lagersaldo på material\n\n## Hur du använder intellifoam_api verktyget\n\n**dashboard** - Använd för:\n- \"Vad har vi idag?\"\n- \"Ge mig en översikt\"\n- \"Hur ser det ut?\"\n\n**search** - Använd för att hitta kunder (kräver q parameter):\n- \"Hitta Svensson\" → action: search, q: Svensson\n- \"Sök efter OFF-2026-0042\" → action: search, q: OFF-2026-0042\n\n**bookings** - Använd för bokningar:\n- \"Vilka installationer har vi?\" → action: bookings\n- \"Bokningar nästa vecka\" → action: bookings, from: (måndag), to: (söndag)\n\n**tasks_list** - Använd för att lista uppgifter:\n- \"Vilka uppgifter har vi?\"\n- \"Vad ska göras?\"\n\n**tasks_create** - Använd för att skapa uppgift:\n- \"Skapa uppgift: ring Andersson\" → action: tasks_create, title: Ring Andersson\n- \"Lägg till uppgift att följa upp offert\" → action: tasks_create, title: Följa upp offert\n\n**tasks_update** - Använd för att avsluta uppgift:\n- \"Markera uppgift 5 som klar\" → action: tasks_update, id: 5, status: completed\n- \"Avsluta uppgift 12\" → action: tasks_update, id: 12, status: completed\n\n**quotes** - Använd för offerter:\n- \"Visa offerter\"\n- \"Väntande offerter\" → action: quotes, status: pending\n\n**materials** - Använd för lagersaldo:\n- \"Hur mycket skum har vi?\"\n- \"Kolla lagret\"\n- \"Lagersaldo\"\n\n## Svarsformat\n\nSvara alltid på svenska. Var kort och tydlig.\n\nVid bokningar, visa:\n- Typ (Installation/Hembesök)\n- Datum och tid\n- Kundnamn\n- Adress\n\nVid uppgifter, visa:\n- Titel\n- Prioritet\n- Deadline (om finns)\n\nVid lager, varna tydligt om något är lågt!\n\n## Viktigt\n\n- Tider är i svensk tid (Europe/Stockholm)\n- Om du inte förstår frågan, be om förtydligande\n- Vid fel från API:et, förklara vänligt vad som gick fel"
+        },
+        "promptType": "define",
+        "text": "={{ $json.content }}"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000002",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [180, 260]
+    },
+    {
+      "parameters": {
+        "model": "moonshot-v1-8k",
+        "options": {
+          "baseURL": "https://api.moonshot.cn/v1",
+          "temperature": 0.7
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000003",
+      "name": "Moonshot Kimi",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [0, 480],
+      "credentials": {
+        "openAiApi": {
+          "id": "REPLACE_WITH_MOONSHOT_CREDENTIAL_ID",
+          "name": "Moonshot API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "intellifoam_api",
+        "description": "Anropa Intellifoam API för att hämta eller uppdatera data. Välj rätt action baserat på vad användaren frågar om.\n\nActions:\n- dashboard: Daglig översikt med dagens bokningar och väntande uppgifter\n- search: Sök efter kunder, offerter eller bokningar (kräver q parameter)\n- bookings: Lista bokningar (kan filtrera med from, to, status, type)\n- tasks_list: Lista väntande uppgifter\n- tasks_create: Skapa ny uppgift (kräver title)\n- tasks_update: Uppdatera uppgift (kräver id och status)\n- quotes: Lista offerter\n- materials: Visa lagersaldo och varningar för lågt lager",
+        "jsCode": "const input = $input.first().json;\nconst BASE_URL = 'https://www.intellifoam.se/api/integrations/bot';\nconst API_KEY = 'intellifoam_n8n_2026';\n\nconst { action, ...params } = input;\n\nconst endpoints = {\n  dashboard: { method: 'GET', path: '/dashboard' },\n  search: { method: 'GET', path: '/search' },\n  bookings: { method: 'GET', path: '/bookings' },\n  tasks_list: { method: 'GET', path: '/tasks' },\n  tasks_create: { method: 'POST', path: '/tasks' },\n  tasks_update: { method: 'PUT', path: '/tasks' },\n  quotes: { method: 'GET', path: '/quotes' },\n  materials: { method: 'GET', path: '/materials' }\n};\n\nconst endpoint = endpoints[action];\nif (!endpoint) {\n  return JSON.stringify({ error: 'Unknown action', validActions: Object.keys(endpoints) });\n}\n\nlet url = BASE_URL + endpoint.path;\n\nif (endpoint.method === 'GET') {\n  const queryParams = [];\n  for (const [key, value] of Object.entries(params)) {\n    if (value !== undefined && value !== null && value !== '') {\n      queryParams.push(`${key}=${encodeURIComponent(value)}`);\n    }\n  }\n  if (queryParams.length > 0) {\n    url += '?' + queryParams.join('&');\n  }\n}\n\ntry {\n  const options = {\n    method: endpoint.method,\n    url: url,\n    headers: { 'x-api-key': API_KEY, 'Content-Type': 'application/json' },\n    json: true\n  };\n\n  if (endpoint.method !== 'GET') {\n    const bodyParams = {};\n    for (const [key, value] of Object.entries(params)) {\n      if (value !== undefined && value !== null && value !== '') {\n        bodyParams[key] = value;\n      }\n    }\n    if (Object.keys(bodyParams).length > 0) {\n      options.body = bodyParams;\n    }\n  }\n\n  const response = await this.helpers.httpRequest(options);\n  return JSON.stringify(response, null, 2);\n} catch (error) {\n  return JSON.stringify({ error: true, message: error.message, action: action, url: url });\n}",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"action\": {\n      \"type\": \"string\",\n      \"enum\": [\"dashboard\", \"search\", \"bookings\", \"tasks_list\", \"tasks_create\", \"tasks_update\", \"quotes\", \"materials\"],\n      \"description\": \"Which API action to perform\"\n    },\n    \"q\": {\n      \"type\": \"string\",\n      \"description\": \"Search query - customer name, phone, address, or quote number (for search action)\"\n    },\n    \"id\": {\n      \"type\": \"number\",\n      \"description\": \"Task ID (for tasks_update)\"\n    },\n    \"title\": {\n      \"type\": \"string\",\n      \"description\": \"Task title (for tasks_create)\"\n    },\n    \"description\": {\n      \"type\": \"string\",\n      \"description\": \"Task description (for tasks_create)\"\n    },\n    \"priority\": {\n      \"type\": \"string\",\n      \"enum\": [\"low\", \"medium\", \"high\", \"urgent\"],\n      \"description\": \"Task priority (for tasks_create)\"\n    },\n    \"due_date\": {\n      \"type\": \"string\",\n      \"description\": \"Due date in YYYY-MM-DD format\"\n    },\n    \"status\": {\n      \"type\": \"string\",\n      \"description\": \"Status to set - use 'completed' to mark task as done (for tasks_update)\"\n    },\n    \"from\": {\n      \"type\": \"string\",\n      \"description\": \"Start date YYYY-MM-DD (for bookings)\"\n    },\n    \"to\": {\n      \"type\": \"string\",\n      \"description\": \"End date YYYY-MM-DD (for bookings)\"\n    },\n    \"type\": {\n      \"type\": \"string\",\n      \"description\": \"Filter by type - 'installation' or 'visit' (for bookings)\"\n    },\n    \"include_shipments\": {\n      \"type\": \"boolean\",\n      \"description\": \"Include pending shipments info (for materials)\"\n    }\n  },\n  \"required\": [\"action\"]\n}"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000004",
+      "name": "Intellifoam API Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.1,
+      "position": [200, 480]
+    },
+    {
+      "parameters": {
+        "sendTo": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Discord Trigger').item.json.channel_id }}"
+        },
+        "content": "={{ $json.output }}"
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000005",
+      "name": "Discord Send Message",
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [460, 260]
+    }
+  ],
+  "connections": {
+    "Discord Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Discord Send Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Moonshot Kimi": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Intellifoam API Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "pinData": {}
+}

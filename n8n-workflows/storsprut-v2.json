@@ -1,0 +1,182 @@
+{
+  "name": "StorSprut Discord Bot v2",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "seconds"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "id": "d10986fa-b83f-4065-9db9-91f652298d7b",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "getAll",
+        "guildId": {
+          "__rl": true,
+          "value": "1139517723433521242",
+          "mode": "list",
+          "cachedResultName": "Intelliwatt",
+          "cachedResultUrl": "https://discord.com/channels/1139517723433521242"
+        },
+        "channelId": {
+          "__rl": true,
+          "value": "1467431896160927835",
+          "mode": "list",
+          "cachedResultName": "intellifoam",
+          "cachedResultUrl": "https://discord.com/channels/1139517723433521242/1467431896160927835"
+        },
+        "limit": 30,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "id": "db6a68d3-ccce-45c4-9c91-1f9cecf466d1",
+      "name": "Get many messages",
+      "webhookId": "48754870-8b1b-42a4-99a7-cc10704a0269"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allMessages = $input.all().map(item => item.json);\n\nconst sortedMessages = [...allMessages].sort((a, b) =>\n  new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()\n);\n\nconst historyMessages = [...sortedMessages].reverse();\nconst historyLines = historyMessages.map(msg => {\n  const isBot = msg.author?.bot === true;\n  const name = isBot ? 'StorSprut' : (msg.author?.global_name || msg.author?.username || 'Användare');\n  const content = msg.content.replace(/<@\\d+>/g, '').trim();\n  return `${name}: ${content}`;\n}).filter(line => !line.endsWith(': '));\n\nconst conversationHistory = historyLines.join('\\n');\n\nconst botId = '1467458709025329272';\nconst newItems = [];\n\nfor (let i = 0; i < sortedMessages.length; i++) {\n  const msg = sortedMessages[i];\n  if (msg.author?.bot === true) continue;\n  if (!msg.content.includes(`<@${botId}>`)) continue;\n  const msgTime = new Date(msg.timestamp).getTime();\n  if (Date.now() - msgTime > 120000) continue;\n\n  let hasReply = false;\n  for (let j = 0; j < i; j++) {\n    if (sortedMessages[j].author?.bot === true) {\n      hasReply = true;\n      break;\n    }\n  }\n  if (hasReply) continue;\n\n  const cleanContent = msg.content.replace(/<@\\d+>/g, '').trim();\n  newItems.push({\n    json: {\n      messageId: msg.id,\n      channelId: msg.channel_id,\n      authorName: msg.author?.global_name || msg.author?.username,\n      cleanContent: cleanContent,\n      conversationHistory: conversationHistory\n    }\n  });\n  break;\n}\n\nreturn newItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0],
+      "id": "44357538-6dd6-46ac-9d22-e2a2c90591d3",
+      "name": "Filter Messages"
+    },
+    {
+      "parameters": {
+        "jsCode": "const question = $json.cleanContent;\n\nconst keywords = {\n  materials: ['lager', 'skum', 'material', 'stock', 'hur mycket har vi'],\n  bookings: ['bokning', 'bokat', 'schema', 'installation', 'nästa vecka', 'schemat', 'bokningar'],\n  tasks: ['uppgift', 'att göra', 'todo', 'uppgifter'],\n  quotes: ['offert', 'offerter'],\n  search: ['hitta', 'sök', 'vem', 'berätta om'],\n  dashboard: ['idag', 'översikt', 'dashboard', 'hur ser det ut']\n};\n\nconst q = question.toLowerCase();\nlet endpoint = 'dashboard';\nlet searchQuery = '';\n\nfor (const [ep, words] of Object.entries(keywords)) {\n  if (words.some(w => q.includes(w))) {\n    endpoint = ep;\n    break;\n  }\n}\n\nif (endpoint === 'search') {\n  searchQuery = question.replace(/hitta|sök efter|sök|berätta om|vem är/gi, '').trim();\n}\n\nconst base = 'https://www.intellifoam.se/api/integrations/bot';\nconst params = [];\nif (searchQuery) params.push('q=' + encodeURIComponent(searchQuery));\n\nlet url = base + '/' + endpoint;\nif (params.length > 0) url += '?' + params.join('&');\n\ntry {\n  const data = await this.helpers.httpRequest({\n    method: 'GET',\n    url: url,\n    headers: { 'x-api-key': 'intellifoam_n8n_2026' },\n    json: true\n  });\n  return { json: { question, endpoint, data: JSON.stringify(data) } };\n} catch(e) {\n  return { json: { question, endpoint, data: '{\"error\":\"' + e.message + '\"}' } };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0],
+      "id": "classify-fetch-node-001",
+      "name": "Classify and Fetch"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Du är StorSprut, assistent för Intellifoam som installerar sprayisolering (PUR-skum). Svara ALLTID på svenska. Var kort och tydlig. Formatera snyggt med punktlistor. Om lagret är lågt, varna med VARNING. Svara BARA baserat på datan. Använd inte tekniska termer.\n\nFråga: {{ $json.question }}\n\nData från {{ $json.endpoint }}:\n{{ $json.data }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2,
+      "position": [880, 0],
+      "id": "respond-node-001",
+      "name": "Respond"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "guildId": {
+          "__rl": true,
+          "value": "1139517723433521242",
+          "mode": "list",
+          "cachedResultName": "Intelliwatt",
+          "cachedResultUrl": "https://discord.com/channels/1139517723433521242"
+        },
+        "channelId": {
+          "__rl": true,
+          "value": "1467431896160927835",
+          "mode": "list",
+          "cachedResultName": "intellifoam",
+          "cachedResultUrl": "https://discord.com/channels/1139517723433521242/1467431896160927835"
+        },
+        "content": "={{ $json.output[0].content[0].text }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [1100, 0],
+      "id": "bdcdc8d4-9a34-41cf-affb-aafd87fae8ec",
+      "name": "Send a message",
+      "webhookId": "1ee59309-151f-4748-9860-f4bf8f18f73e"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages": {
+      "main": [
+        [
+          {
+            "node": "Filter Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Messages": {
+      "main": [
+        [
+          {
+            "node": "Classify and Fetch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify and Fetch": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

@@ -6,7 +6,7 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Simple API key auth for n8n
+// Simple API key auth for bot integrations
 function verifyApiKey(request: NextRequest): boolean {
   const apiKey = request.headers.get('x-api-key') || request.headers.get('authorization')?.replace('Bearer ', '');
   const expectedKey = process.env.N8N_API_KEY;
@@ -168,7 +168,7 @@ export async function GET(request: NextRequest) {
       quotes: formatted || [],
     });
   } catch (err) {
-    console.error('n8n quotes GET error:', err);
+    console.error('bot quotes GET error:', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
@@ -210,7 +210,7 @@ export async function PUT(request: NextRequest) {
       quote,
     });
   } catch (err) {
-    console.error('n8n quotes PUT error:', err);
+    console.error('bot quotes PUT error:', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }

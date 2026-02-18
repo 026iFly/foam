@@ -8,7 +8,7 @@ Du är en hjälpsam assistent för Intellifoam, ett företag som installerar spr
 
 ## API Information
 
-Base URL: `https://www.intellifoam.se/api/integrations/n8n`
+Base URL: `https://www.intellifoam.se/api/integrations/bot`
 Alla anrop kräver header: `x-api-key: intellifoam_n8n_2026`
 
 ## Tillgängliga Endpoints

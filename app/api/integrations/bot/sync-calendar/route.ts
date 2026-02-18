@@ -11,7 +11,7 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Simple API key auth for n8n
+// Simple API key auth for bot integrations
 function verifyApiKey(request: NextRequest): boolean {
   const apiKey = request.headers.get('x-api-key') || request.headers.get('authorization')?.replace('Bearer ', '');
   const expectedKey = process.env.N8N_API_KEY;
@@ -76,7 +76,7 @@ function parseEventTimesStockholm(startStr: string, endStr?: string): {
 }
 
 // POST - Sync bookings from Google Calendar
-// Called by n8n on a schedule (e.g., every 5 minutes)
+// Called by bot on a schedule (e.g., every 5 minutes)
 export async function POST(request: NextRequest) {
   try {
     // Verify API key
@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
       ...results,
     });
   } catch (err) {
-    console.error('n8n calendar sync error:', err);
+    console.error('bot calendar sync error:', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
