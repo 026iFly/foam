@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     if (searchType === 'all' || searchType === 'quotes') {
       const { data: quotes } = await supabaseAdmin
         .from('quote_requests')
-        .select('id, quote_number, customer_name, customer_email, customer_phone, customer_address, status, total_price_incl_vat')
+        .select('id, quote_number, customer_name, customer_email, customer_phone, customer_address, status, total_incl_vat')
         .or(`customer_name.ilike.%${query}%,customer_email.ilike.%${query}%,customer_phone.ilike.%${query}%,quote_number.ilike.%${query}%,customer_address.ilike.%${query}%`)
         .limit(10);
 
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
         customerPhone: q.customer_phone,
         address: q.customer_address,
         status: q.status,
-        price: q.total_price_incl_vat,
+        price: q.total_incl_vat ?? null,
       })) || [];
     }
 

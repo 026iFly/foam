@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
       // Recent quotes (last 5)
       supabaseAdmin
         .from('quote_requests')
-        .select('id, quote_number, customer_name, status, total_price_incl_vat, created_at')
+        .select('id, quote_number, customer_name, status, total_incl_vat, created_at')
         .order('created_at', { ascending: false })
         .limit(5),
 
@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
       quoteNumber: q.quote_number,
       customer: q.customer_name,
       status: q.status,
-      price: q.total_price_incl_vat,
+      price: q.total_incl_vat ?? null,
       createdAt: q.created_at,
     })) || [];
 
