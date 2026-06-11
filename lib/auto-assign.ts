@@ -8,6 +8,7 @@ import { createClient } from '@supabase/supabase-js';
 import { getAvailableInstallers } from '@/lib/installer-availability';
 import { sendInstallerConfirmationEmail, sendBookingConfirmationEmail } from '@/lib/email';
 import { sendDiscordNotification, notifyInstallationBooked } from '@/lib/discord';
+import { isDiscordBotConfigured, postBotMessage } from '@/lib/discord-bot';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -182,15 +183,32 @@ export async function sendInstallerNotifications(
     { name: 'Tid', value: bookingData?.scheduled_time ? `${bookingData.scheduled_time} (${slotLabel})` : slotLabel, inline: true },
   ];
 
-  sendDiscordNotification({
-    embeds: [{
-      title: embedTitle,
-      description: `${installerName} - väntar på bekräftelse`,
-      color: 0xeab308,
-      fields: discordFields,
-      footer: { text: `Token: ${discordToken}` },
-    }],
-  }).catch(console.error);
+  if (isDiscordBotConfigured()) {
+    // Serverless bot: post with accept/decline buttons handled by
+    // /api/discord/interactions (no OpenClaw/n8n server needed)
+    postBotMessage({
+      embeds: [{
+        title: embedTitle,
+        description: `${installerName} - väntar på bekräftelse`,
+        color: 0xeab308,
+        fields: discordFields,
+      }],
+      buttons: [
+        { label: 'Acceptera', customId: `confirm:accept:${discordToken}`, style: 3 },
+        { label: 'Avböj', customId: `confirm:decline:${discordToken}`, style: 4 },
+      ],
+    }).catch(console.error);
+  } else {
+    sendDiscordNotification({
+      embeds: [{
+        title: embedTitle,
+        description: `${installerName} - väntar på bekräftelse`,
+        color: 0xeab308,
+        fields: discordFields,
+        footer: { text: `Token: ${discordToken}` },
+      }],
+    }).catch(console.error);
+  }
 
   // Channel 3: In-app task
   await supabaseAdmin
