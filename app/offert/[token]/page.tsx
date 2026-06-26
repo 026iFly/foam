@@ -306,8 +306,8 @@ export default function OfferPage({ params }: { params: Promise<{ token: string 
                 010 703 74 00
               </a>
               {' • '}
-              <a href="mailto:info@intellifoam.se" className="text-green-600 hover:text-green-700">
-                info@intellifoam.se
+              <a href="mailto:foam@gronteknik.nu" className="text-green-600 hover:text-green-700">
+                foam@gronteknik.nu
               </a>
             </p>
           </div>

@@ -334,7 +334,7 @@ function ContactPageContent() {
                   <div>
                     <h3 className="font-semibold text-gray-800 mb-1">E-post</h3>
                     <p className="text-gray-900">
-                      <a href="mailto:info@intellifoam.se" className="hover:text-green-600 transition">info@intellifoam.se</a>
+                      <a href="mailto:foam@gronteknik.nu" className="hover:text-green-600 transition">foam@gronteknik.nu</a>
                     </p>
                   </div>
                   <div>

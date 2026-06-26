@@ -903,7 +903,7 @@ export default function CustomerPortalPage() {
         {/* Contact Info */}
         <div className="text-center py-4">
           <p className="text-xs text-gray-700">
-            Frågor? Ring 010 703 74 00 eller mejla info@intellifoam.se
+            Frågor? Ring 010 703 74 00 eller mejla foam@gronteknik.nu
           </p>
         </div>
       </div>

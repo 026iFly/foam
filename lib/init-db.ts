@@ -87,7 +87,7 @@ if (checkCompany.count === 0) {
     'Intellifoam',
     '', // Add org number when available
     '010 703 74 00',
-    'info@intellifoam.se',
+    'foam@gronteknik.nu',
     'https://intellifoam.se',
     'Vi erbjuder professionell sprayisolering med fokus på miljövänliga lösningar.'
   );

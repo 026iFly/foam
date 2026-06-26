@@ -52,7 +52,7 @@ export async function sendEmail(
   try {
     await transporter.sendMail({
       from: `"Intellifoam" <${fromAddress}>`,
-      replyTo: options.replyTo || process.env.SMTP_REPLY_TO || 'info@intellifoam.se',
+      replyTo: options.replyTo || process.env.SMTP_REPLY_TO || 'foam@gronteknik.nu',
       to: options.to,
       subject: options.subject,
       text: options.text,
@@ -60,7 +60,7 @@ export async function sendEmail(
       attachments: options.attachments,
       headers: {
         'X-Mailer': 'Intellifoam',
-        'List-Unsubscribe': `<mailto:info@intellifoam.se?subject=unsubscribe>`,
+        'List-Unsubscribe': `<mailto:foam@gronteknik.nu?subject=unsubscribe>`,
       },
     });
 
@@ -125,7 +125,7 @@ Offerten är giltig till {{valid_until}}.
 Klicka här för att se och godkänna offerten:
 {{offer_link}}
 
-Har du frågor? Kontakta oss på 010 703 74 00 eller info@intellifoam.se.
+Har du frågor? Kontakta oss på 010 703 74 00 eller foam@gronteknik.nu.
 
 Med vänliga hälsningar,
 Intellifoam`,
@@ -165,7 +165,7 @@ Tack för din beställning! Vi har tagit emot den och börjar planera din instal
 Logga in på din kundportal för att välja installationsdatum och se detaljer:
 {{portal_link}}
 
-Har du frågor? Kontakta oss på 010 703 74 00 eller info@intellifoam.se.
+Har du frågor? Kontakta oss på 010 703 74 00 eller foam@gronteknik.nu.
 
 Med vänliga hälsningar,
 Intellifoam`,
