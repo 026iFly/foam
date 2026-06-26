@@ -26,6 +26,7 @@ interface EmailOptions {
   subject: string;
   text?: string;
   html?: string;
+  replyTo?: string;
   attachments?: Array<{
     filename: string;
     content: Buffer | string;
@@ -51,7 +52,7 @@ export async function sendEmail(
   try {
     await transporter.sendMail({
       from: `"Intellifoam" <${fromAddress}>`,
-      replyTo: process.env.SMTP_REPLY_TO || 'info@intellifoam.se',
+      replyTo: options.replyTo || process.env.SMTP_REPLY_TO || 'info@intellifoam.se',
       to: options.to,
       subject: options.subject,
       text: options.text,
@@ -499,6 +500,57 @@ export async function sendBookingConfirmationEmail(
     text,
     html: text.replace(/\n/g, '<br>'),
   });
+}
+
+/**
+ * Notify the business of a new contact form / quote request submission.
+ * Recipient defaults to pelle@gronteknik.nu (override with CONTACT_NOTIFICATION_EMAIL).
+ * Reply-To is set to the customer so replies go straight back to them.
+ */
+export async function sendContactNotificationEmail(submission: {
+  type: 'contact' | 'quote';
+  name: string;
+  email: string;
+  phone?: string;
+  project_type?: string;
+  message?: string;
+  customer_address?: string;
+  total_incl_vat?: number;
+  quote_id?: number;
+}): Promise<boolean> {
+  const to = process.env.CONTACT_NOTIFICATION_EMAIL || 'pelle@gronteknik.nu';
+  const isQuote = submission.type === 'quote';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.intellifoam.se';
+
+  const subject = isQuote
+    ? `Ny offertförfrågan: ${submission.name}`
+    : `Nytt kontaktmeddelande: ${submission.name}`;
+
+  const lines = [
+    `Namn: ${submission.name}`,
+    `E-post: ${submission.email}`,
+    submission.phone ? `Telefon: ${submission.phone}` : null,
+    submission.project_type ? `Projekttyp: ${submission.project_type}` : null,
+    submission.customer_address ? `Adress: ${submission.customer_address}` : null,
+    isQuote && submission.total_incl_vat != null
+      ? `Beräknat pris (inkl. moms): ${Math.round(submission.total_incl_vat).toLocaleString('sv-SE')} kr`
+      : null,
+    submission.message ? `\nMeddelande:\n${submission.message}` : null,
+    isQuote && submission.quote_id ? `\nÖppna i admin: ${baseUrl}/admin/quotes/${submission.quote_id}` : null,
+  ].filter(Boolean);
+
+  const text = `Du har fått en ny ${isQuote ? 'offertförfrågan' : 'kontaktförfrågan'} via webbplatsen.\n\n${lines.join('\n')}`;
+
+  return sendEmail(
+    {
+      to,
+      subject,
+      text,
+      html: text.replace(/\n/g, '<br>'),
+      replyTo: submission.email,
+    },
+    { event_type: isQuote ? 'quote_request_received' : 'contact_received', reference_type: 'quote', reference_id: submission.quote_id }
+  );
 }
 
 /**

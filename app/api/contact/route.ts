@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { saveContactSubmission } from '@/lib/queries';
 import { createQuoteRequest } from '@/lib/quotes';
 import { notifyNewQuoteRequest } from '@/lib/discord';
+import { sendContactNotificationEmail } from '@/lib/email';
 import type { CalculationData } from '@/lib/types/quote';
 
 export async function POST(request: Request) {
@@ -48,6 +49,19 @@ export async function POST(request: Request) {
         total_incl_vat: calculationData.totals?.totalInclVat,
       }).catch(err => console.error('Discord notification failed:', err));
 
+      // Notify the business by email (don't await to not block response)
+      sendContactNotificationEmail({
+        type: 'quote',
+        name: body.name,
+        email: body.email,
+        phone: body.phone,
+        project_type: body.project_type,
+        message: body.message,
+        customer_address: body.customer_address,
+        total_incl_vat: calculationData.totals?.totalInclVat,
+        quote_id: quoteId,
+      }).catch(err => console.error('Quote notification email failed:', err));
+
       return NextResponse.json({
         success: true,
         quote_id: quoteId,
@@ -71,6 +85,16 @@ export async function POST(request: Request) {
       message: body.message,
       project_type: body.project_type,
     });
+
+    // Notify the business by email (don't await to not block response)
+    sendContactNotificationEmail({
+      type: 'contact',
+      name: body.name,
+      email: body.email,
+      phone: body.phone,
+      project_type: body.project_type,
+      message: body.message,
+    }).catch(err => console.error('Contact notification email failed:', err));
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
