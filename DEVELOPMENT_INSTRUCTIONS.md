@@ -511,7 +511,7 @@ Offerten är giltig till {{valid_until}}.
 Klicka här för att se och godkänna offerten:
 {{offer_link}}
 
-Har du frågor? Kontakta oss på 010 703 74 00 eller info@intellifoam.se.
+Har du frågor? Kontakta oss på 010 703 74 00 eller foam@gronteknik.nu.
 
 Med vänliga hälsningar,
 Intellifoam

@@ -37,7 +37,7 @@ export async function sendQuoteEmail({
   companyEmail,
   companyPhone,
 }: SendQuoteEmailParams): Promise<{ success: boolean; error?: string }> {
-  const fromEmail = process.env.EMAIL_FROM || 'pelle@gronteknik.nu';
+  const fromEmail = process.env.EMAIL_FROM || 'foam@gronteknik.nu';
 
   const formattedAmount = totalAmount.toLocaleString('sv-SE');
   const formattedDate = new Date(validUntil).toLocaleDateString('sv-SE', {

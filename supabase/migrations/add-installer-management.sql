@@ -200,7 +200,7 @@ Du kan följa din bokning och se detaljer via din kundportal:
 
 Vid inloggning anger du ditt efternamn.
 
-Har du frågor? Kontakta oss på 010 703 74 00 eller info@intellifoam.se.
+Har du frågor? Kontakta oss på 010 703 74 00 eller foam@gronteknik.nu.
 
 Med vänliga hälsningar,
 Intellifoam', true),

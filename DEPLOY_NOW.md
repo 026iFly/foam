@@ -49,7 +49,7 @@ sqlite3 data/foam.db
 
 UPDATE company_info SET
   phone = '+46 XXX XXX XX XX',      -- Add real phone
-  email = 'info@intellifoam.se',    -- Add real email
+  email = 'foam@gronteknik.nu',    -- Add real email
   address = 'Elektrikergatan 3',    -- Confirm address
   postal_code = '803 10',
   city = 'Gävle',
