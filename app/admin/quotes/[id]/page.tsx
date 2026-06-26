@@ -56,6 +56,11 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
   const [rotMaxPerPerson, setRotMaxPerPerson] = useState(50000);
   const [savingRotSettings, setSavingRotSettings] = useState(false);
 
+  // Per-offer cost overrides (empty string = use default shown as placeholder)
+  const [costOverrides, setCostOverrides] = useState<Record<string, string>>({});
+  const [costDefaults, setCostDefaults] = useState<Record<string, number>>({});
+  const [showCostPanel, setShowCostPanel] = useState(false);
+
   // Booking state
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingType, setBookingType] = useState<'visit' | 'installation'>('visit');
@@ -103,7 +108,33 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
   useEffect(() => {
     fetchQuote();
     fetchBookings();
+    fetchCostDefaults();
   }, [id]);
+
+  const fetchCostDefaults = async () => {
+    try {
+      const res = await fetch('/api/admin/cost-variables');
+      if (res.ok) {
+        const d = await res.json();
+        const map: Record<string, number> = {};
+        for (const v of d.variables || []) map[v.variable_key] = v.variable_value;
+        setCostDefaults(map);
+      }
+    } catch (error) {
+      console.error('Error fetching cost defaults:', error);
+    }
+  };
+
+  // Build the numeric cost-override object to send (skips blank fields)
+  const buildCostOverrides = (): Record<string, number> => {
+    const out: Record<string, number> = {};
+    for (const [k, val] of Object.entries(costOverrides)) {
+      if (val === '' || val === null || val === undefined) continue;
+      const n = Number(val);
+      if (!Number.isNaN(n)) out[k] = n;
+    }
+    return out;
+  };
 
   const fetchQuote = async () => {
     try {
@@ -119,6 +150,12 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
         const cd = data.adjusted_data || data.calculation_data;
         setRotEnabled(cd?.options?.applyRotDeduction ?? false);
         setRotMaxPerPerson(data.rot_max_per_person ?? 50000);
+        // Initialize per-offer cost overrides from the saved record
+        const savedOverrides = (data.cost_overrides || {}) as Record<string, number>;
+        const overridesStr: Record<string, string> = {};
+        for (const k of Object.keys(savedOverrides)) overridesStr[k] = String(savedOverrides[k]);
+        setCostOverrides(overridesStr);
+        if (Object.keys(overridesStr).length > 0) setShowCostPanel(true);
         // Set ROT link if token exists
         if (data.rot_info_token) {
           const baseUrl = window.location.origin;
@@ -388,6 +425,7 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
           })),
           climate: calcData.climate,
           options: { ...calcData.options, applyRotDeduction: rotEnabled },
+          costOverrides: buildCostOverrides(),
         }),
       });
 
@@ -449,6 +487,7 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
               ...calcData.options,
               applyRotDeduction: rotEnabled,
             },
+            costOverrides: buildCostOverrides(),
           }),
         });
 
@@ -464,6 +503,7 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
               adjusted_data: adjustedData,
               adjusted_total_excl_vat: adjustedData.totals.totalExclVat,
               adjusted_total_incl_vat: adjustedData.totals.finalTotal,
+              cost_overrides: buildCostOverrides(),
             }),
           });
 
@@ -696,6 +736,43 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
 
   const calculatedTotals = recalculateTotals();
   const calcData = quote.adjusted_data || quote.calculation_data;
+
+  // Per-offer cost-override fields. `derived` keys take their default placeholder
+  // from the current calculated totals; the rest from the global cost variables.
+  const COST_OVERRIDE_GROUPS: {
+    group: string;
+    fields: { key: string; label: string; unit: string; derived?: keyof NonNullable<typeof calculatedTotals> }[];
+  }[] = [
+    { group: 'Material – slutencell', fields: [
+      { key: 'closed_material_cost', label: 'Materialkostnad', unit: 'kr/kg' },
+      { key: 'closed_margin', label: 'Marginal', unit: '%' },
+      { key: 'closed_density', label: 'Densitet', unit: 'kg/m³' },
+      { key: 'closed_spray_time', label: 'Spruttid', unit: 'h/m³' },
+    ] },
+    { group: 'Material – öppencell', fields: [
+      { key: 'open_material_cost', label: 'Materialkostnad', unit: 'kr/kg' },
+      { key: 'open_margin', label: 'Marginal', unit: '%' },
+      { key: 'open_density', label: 'Densitet', unit: 'kg/m³' },
+      { key: 'open_spray_time', label: 'Spruttid', unit: 'h/m³' },
+    ] },
+    { group: 'Arbete', fields: [
+      { key: 'personnel_cost_per_hour', label: 'Timkostnad', unit: 'kr/h' },
+      { key: 'setup_hours', label: 'Riggtid', unit: 'h' },
+      { key: 'spray_hours', label: 'Arbetstid totalt', unit: 'h', derived: 'sprayHours' },
+    ] },
+    { group: 'Resa & körning', fields: [
+      { key: 'distance_km', label: 'Körsträcka (enkel)', unit: 'km', derived: 'distanceKm' },
+      { key: 'travel_base_cost', label: 'Grundkostnad resa', unit: 'kr' },
+      { key: 'travel_cost_per_km', label: 'Kostnad per km', unit: 'kr/km' },
+      { key: 'average_travel_speed_kmh', label: 'Medelhastighet', unit: 'km/h' },
+      { key: 'travel_hours', label: 'Restid', unit: 'h', derived: 'travelHours' },
+      { key: 'travel_cost', label: 'Reskostnad totalt', unit: 'kr', derived: 'travelCost' },
+    ] },
+    { group: 'Utrustning', fields: [
+      { key: 'generator_cost', label: 'Elverk (utan 3-fas)', unit: 'kr' },
+    ] },
+  ];
+  const overrideCount = Object.values(costOverrides).filter((v) => v !== '' && v !== null && v !== undefined).length;
 
   return (
     <div className="py-8">
@@ -1171,6 +1248,71 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Per-offer cost overrides */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <button
+                onClick={() => setShowCostPanel((s) => !s)}
+                className="w-full flex items-center justify-between text-left"
+              >
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Justera kostnader för denna offert
+                  {overrideCount > 0 && (
+                    <span className="ml-2 text-sm font-medium text-white bg-blue-600 rounded-full px-2 py-0.5">
+                      {overrideCount} ändrade
+                    </span>
+                  )}
+                </h2>
+                <svg className={`w-5 h-5 text-gray-700 transition-transform ${showCostPanel ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {showCostPanel && (
+                <div className="mt-4 space-y-5">
+                  <p className="text-sm text-gray-700">
+                    Lämna fältet tomt för att använda standardvärdet (visas som grå text). Ett ifyllt värde gäller endast denna offert. Klicka <strong>Räkna om</strong> för att uppdatera totalen.
+                  </p>
+                  {COST_OVERRIDE_GROUPS.map((grp) => (
+                    <div key={grp.group}>
+                      <h3 className="text-sm font-semibold text-gray-800 mb-2">{grp.group}</h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        {grp.fields.map((f) => {
+                          const defaultVal = f.derived
+                            ? (calculatedTotals as Record<string, number> | null)?.[f.derived as string]
+                            : costDefaults[f.key];
+                          return (
+                            <div key={f.key}>
+                              <label className="block text-xs text-gray-700 mb-1">
+                                {f.label} <span className="text-gray-500">({f.unit})</span>
+                              </label>
+                              <input
+                                type="number"
+                                value={costOverrides[f.key] ?? ''}
+                                placeholder={defaultVal !== undefined && defaultVal !== null ? String(defaultVal) : '–'}
+                                onChange={(e) => {
+                                  setCostOverrides((o) => ({ ...o, [f.key]: e.target.value }));
+                                  setHasChanges(true);
+                                }}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 text-sm"
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                  {overrideCount > 0 && (
+                    <button
+                      onClick={() => { setCostOverrides({}); setHasChanges(true); }}
+                      className="text-sm text-red-600 hover:text-red-700 font-medium"
+                    >
+                      Återställ alla till standard
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Admin Notes */}

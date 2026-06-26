@@ -87,7 +87,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { parts, climate, options } = body as {
+    const { parts, climate, options, costOverrides } = body as {
       parts: RecalculatePartInput[];
       climate: {
         zone: string;
@@ -100,11 +100,35 @@ export async function POST(
         applyRotDeduction: boolean;
         customerAddress: string;
       };
+      costOverrides?: Record<string, unknown>;
     };
 
     // Get cost variables and physics variables from database
     const { vars, physicsVars } = await getCostVariables();
     const multipliers = await getProjectMultipliers();
+
+    // Per-offer cost overrides: only numeric, non-empty values are applied.
+    // Rate/variable keys are merged on top of the global defaults so the rest
+    // of the calculation transparently uses the overridden value for THIS offer
+    // only. Quantity overrides (spray_hours, distance_km, travel_*) are handled
+    // further down. When nothing is overridden, behaviour is identical to before.
+    const ov: Record<string, number> = {};
+    if (costOverrides && typeof costOverrides === 'object') {
+      for (const [k, val] of Object.entries(costOverrides)) {
+        if (val === '' || val === null || val === undefined) continue;
+        const n = Number(val);
+        if (!Number.isNaN(n)) ov[k] = n;
+      }
+    }
+    const RATE_OVERRIDE_KEYS = [
+      'closed_material_cost', 'closed_margin', 'closed_density', 'closed_spray_time',
+      'open_material_cost', 'open_margin', 'open_density', 'open_spray_time',
+      'personnel_cost_per_hour', 'generator_cost', 'travel_base_cost',
+      'travel_cost_per_km', 'setup_hours', 'average_travel_speed_kmh',
+    ];
+    for (const k of RATE_OVERRIDE_KEYS) {
+      if (ov[k] !== undefined) vars[k] = ov[k];
+    }
 
     // Load crew settings and BBR U-values from system_settings
     const { data: crewSettingsRow } = await supabase
@@ -307,6 +331,10 @@ export async function POST(
     if (numInstallers === 1) {
       adjustedSprayHours = totalSprayHours * (1 + singleFactor / 100);
     }
+    // Per-offer direct override of total labour (spray) hours
+    if (ov.spray_hours !== undefined) {
+      adjustedSprayHours = ov.spray_hours;
+    }
 
     // Calculate shared costs
     const setupHours = vars.setup_hours || 2;
@@ -334,11 +362,33 @@ export async function POST(
         ? JSON.parse(quote.calculation_data)
         : null;
 
-    const preservedTravelCost = originalData?.totals.travelCost || 0;
-    const preservedDistanceKm = originalData?.totals.distanceKm || 0;
-    const preservedTravelHours = originalData?.totals.travelHours || 0;
+    // Travel / mileage: overrides win, else preserve the original calculated values.
+    // Mileage (distance_km) drives travel time and, when combined with travel-rate
+    // overrides, the travel cost — unless travel_cost is overridden directly.
+    const travelSpeed = vars.average_travel_speed_kmh || 80;
+    const distanceKm = ov.distance_km !== undefined
+      ? ov.distance_km
+      : (originalData?.totals.distanceKm || 0);
 
-    const totalExclVat = Math.round(totalMaterialCost + totalLaborCost + preservedTravelCost + generatorCost);
+    let travelHoursVal: number;
+    if (ov.travel_hours !== undefined) {
+      travelHoursVal = ov.travel_hours;
+    } else if (distanceKm > 0) {
+      travelHoursVal = Math.round(((distanceKm * 2) / travelSpeed) * 10) / 10;
+    } else {
+      travelHoursVal = originalData?.totals.travelHours || 0;
+    }
+
+    let travelCostVal: number;
+    if (ov.travel_cost !== undefined) {
+      travelCostVal = ov.travel_cost;
+    } else if (distanceKm > 0 && (ov.distance_km !== undefined || ov.travel_base_cost !== undefined || ov.travel_cost_per_km !== undefined)) {
+      travelCostVal = Math.round((vars.travel_base_cost || 0) + distanceKm * (vars.travel_cost_per_km || 0));
+    } else {
+      travelCostVal = originalData?.totals.travelCost || 0;
+    }
+
+    const totalExclVat = Math.round(totalMaterialCost + totalLaborCost + travelCostVal + generatorCost);
     const vat = Math.round(totalExclVat * 0.25);
     const totalInclVat = totalExclVat + vat;
 
@@ -382,19 +432,19 @@ export async function POST(
         totalOpenCellKg: Math.round(totalOpenCellKg * 10) / 10,
         materialCostTotal: Math.round(totalMaterialCost),
         laborCostTotal: Math.round(totalLaborCost),
-        travelCost: preservedTravelCost,
+        travelCost: travelCostVal,
         generatorCost,
         totalExclVat,
         vat,
         totalInclVat,
         rotDeduction,
         finalTotal,
-        sprayHours: Math.round(totalSprayHours * 10) / 10,
+        sprayHours: Math.round(adjustedSprayHours * 10) / 10,
         setupHours,
-        travelHours: preservedTravelHours,
+        travelHours: travelHoursVal,
         switchingHours,
-        totalHours: Math.round((totalSprayHours + setupHours + preservedTravelHours + switchingHours) * 10) / 10,
-        distanceKm: preservedDistanceKm,
+        totalHours: Math.round((adjustedSprayHours + setupHours + travelHoursVal + switchingHours) * 10) / 10,
+        distanceKm,
       },
       timestamp: Date.now(),
     };

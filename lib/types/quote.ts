@@ -35,6 +35,7 @@ export interface QuoteRequest {
   adjusted_data: string | null;
   adjusted_total_excl_vat: number | null;
   adjusted_total_incl_vat: number | null;
+  cost_overrides?: Record<string, number> | null;
 
   // Quote document
   quote_number: string | null;
@@ -187,6 +188,7 @@ export interface UpdateQuoteRequestInput {
   adjusted_data?: string;
   adjusted_total_excl_vat?: number;
   adjusted_total_incl_vat?: number;
+  cost_overrides?: Record<string, number> | null;
   quote_number?: string;
   quote_pdf_path?: string;
   quote_valid_until?: string;
