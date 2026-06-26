@@ -49,18 +49,24 @@ export async function POST(request: Request) {
         total_incl_vat: calculationData.totals?.totalInclVat,
       }).catch(err => console.error('Discord notification failed:', err));
 
-      // Notify the business by email (don't await to not block response)
-      sendContactNotificationEmail({
-        type: 'quote',
-        name: body.name,
-        email: body.email,
-        phone: body.phone,
-        project_type: body.project_type,
-        message: body.message,
-        customer_address: body.customer_address,
-        total_incl_vat: calculationData.totals?.totalInclVat,
-        quote_id: quoteId,
-      }).catch(err => console.error('Quote notification email failed:', err));
+      // Notify the business by email. Awaited so it reliably completes before
+      // the serverless function freezes; wrapped so a failure never blocks the
+      // customer's submission.
+      try {
+        await sendContactNotificationEmail({
+          type: 'quote',
+          name: body.name,
+          email: body.email,
+          phone: body.phone,
+          project_type: body.project_type,
+          message: body.message,
+          customer_address: body.customer_address,
+          total_incl_vat: calculationData.totals?.totalInclVat,
+          quote_id: quoteId,
+        });
+      } catch (err) {
+        console.error('Quote notification email failed:', err);
+      }
 
       return NextResponse.json({
         success: true,
@@ -86,15 +92,21 @@ export async function POST(request: Request) {
       project_type: body.project_type,
     });
 
-    // Notify the business by email (don't await to not block response)
-    sendContactNotificationEmail({
-      type: 'contact',
-      name: body.name,
-      email: body.email,
-      phone: body.phone,
-      project_type: body.project_type,
-      message: body.message,
-    }).catch(err => console.error('Contact notification email failed:', err));
+    // Notify the business by email. Awaited so it reliably completes before
+    // the serverless function freezes; wrapped so a failure never blocks the
+    // customer's submission.
+    try {
+      await sendContactNotificationEmail({
+        type: 'contact',
+        name: body.name,
+        email: body.email,
+        phone: body.phone,
+        project_type: body.project_type,
+        message: body.message,
+      });
+    } catch (err) {
+      console.error('Contact notification email failed:', err);
+    }
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
