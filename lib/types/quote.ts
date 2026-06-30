@@ -189,6 +189,7 @@ export interface UpdateQuoteRequestInput {
   adjusted_total_excl_vat?: number;
   adjusted_total_incl_vat?: number;
   cost_overrides?: Record<string, number> | null;
+  rot_deduction?: number;
   quote_number?: string;
   quote_pdf_path?: string;
   quote_valid_until?: string;

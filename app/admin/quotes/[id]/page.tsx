@@ -502,7 +502,10 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
               admin_notes: adminNotes,
               adjusted_data: adjustedData,
               adjusted_total_excl_vat: adjustedData.totals.totalExclVat,
-              adjusted_total_incl_vat: adjustedData.totals.finalTotal,
+              // incl-VAT is stored BEFORE ROT (consistent with the original
+              // columns); ROT is stored separately and subtracted by consumers.
+              adjusted_total_incl_vat: adjustedData.totals.totalInclVat,
+              rot_deduction: adjustedData.totals.rotDeduction,
               cost_overrides: buildCostOverrides(),
             }),
           });

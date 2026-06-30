@@ -80,6 +80,9 @@ export async function PUT(
     if (body.cost_overrides !== undefined) {
       updateData.cost_overrides = body.cost_overrides;
     }
+    if (body.rot_deduction !== undefined) {
+      updateData.rot_deduction = body.rot_deduction;
+    }
     if (body.quote_number !== undefined) updateData.quote_number = body.quote_number;
     if (body.quote_pdf_path !== undefined) updateData.quote_pdf_path = body.quote_pdf_path;
     if (body.quote_valid_until !== undefined) updateData.quote_valid_until = body.quote_valid_until;

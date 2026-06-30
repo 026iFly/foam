@@ -133,6 +133,7 @@ export async function updateQuoteRequest(id: number, input: UpdateQuoteRequestIn
   if (input.adjusted_total_excl_vat !== undefined) updates.adjusted_total_excl_vat = input.adjusted_total_excl_vat;
   if (input.adjusted_total_incl_vat !== undefined) updates.adjusted_total_incl_vat = input.adjusted_total_incl_vat;
   if (input.cost_overrides !== undefined) updates.cost_overrides = input.cost_overrides;
+  if (input.rot_deduction !== undefined) updates.rot_deduction = Math.round(input.rot_deduction);
   if (input.quote_number !== undefined) updates.quote_number = input.quote_number;
   if (input.quote_pdf_path !== undefined) updates.quote_pdf_path = input.quote_pdf_path;
   if (input.quote_valid_until !== undefined) updates.quote_valid_until = input.quote_valid_until;
