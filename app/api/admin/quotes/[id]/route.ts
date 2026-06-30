@@ -3,6 +3,7 @@ import { isAuthenticated } from '@/lib/supabase-auth';
 import { getQuoteRequest, updateQuoteRequest, deleteQuoteRequest, markQuoteReviewed, markQuoteQuoted } from '@/lib/quotes';
 import type { UpdateQuoteRequestInput } from '@/lib/types/quote';
 import { notifyQuoteUpdated } from '@/lib/discord';
+import { supabase } from '@/lib/supabase';
 
 export async function GET(
   request: Request,
@@ -20,11 +21,25 @@ export async function GET(
       return NextResponse.json({ error: 'Offert ej hittad' }, { status: 404 });
     }
 
+    // Offer-open stats (how many times the customer opened the offer + last open)
+    const { count: viewsCount } = await supabase
+      .from('offer_views')
+      .select('id', { count: 'exact', head: true })
+      .eq('quote_id', parseInt(id));
+    const { data: lastViewRows } = await supabase
+      .from('offer_views')
+      .select('viewed_at')
+      .eq('quote_id', parseInt(id))
+      .order('viewed_at', { ascending: false })
+      .limit(1);
+
     // Parse the JSON fields (keep rot_customer_info as string for client-side parsing)
     const parsedQuote = {
       ...quote,
       calculation_data: quote.calculation_data ? JSON.parse(quote.calculation_data) : null,
       adjusted_data: quote.adjusted_data ? JSON.parse(quote.adjusted_data) : null,
+      offer_views_count: viewsCount || 0,
+      offer_last_viewed_at: lastViewRows?.[0]?.viewed_at || null,
       // rot_customer_info stays as string to be parsed on client if needed
     };
 

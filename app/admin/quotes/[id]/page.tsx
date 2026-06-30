@@ -35,6 +35,8 @@ const CONDENSATION_RISK_LABELS: Record<string, { label: string; color: string }>
 interface ParsedQuote extends Omit<QuoteRequest, 'calculation_data' | 'adjusted_data'> {
   calculation_data: CalculationData | null;
   adjusted_data: CalculationData | null;
+  offer_views_count?: number;
+  offer_last_viewed_at?: string | null;
 }
 
 export default function QuoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -1761,6 +1763,19 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                     <p className="text-gray-900">{formatDate(quote.email_sent_at)}</p>
                   </div>
                 )}
+                <div>
+                  <span className="text-gray-500">Offert öppnad:</span>
+                  {quote.offer_views_count && quote.offer_views_count > 0 ? (
+                    <p className="text-gray-900">
+                      {quote.offer_views_count} {quote.offer_views_count === 1 ? 'gång' : 'gånger'}
+                      {quote.offer_last_viewed_at && (
+                        <span className="text-gray-600"> · senast {formatDate(quote.offer_last_viewed_at)}</span>
+                      )}
+                    </p>
+                  ) : (
+                    <p className="text-gray-600">Inte öppnad än</p>
+                  )}
+                </div>
                 {quote.quote_valid_until && (
                   <div>
                     <span className="text-gray-500">Offert giltig till:</span>

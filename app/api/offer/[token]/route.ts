@@ -40,6 +40,14 @@ export async function GET(
       return NextResponse.json({ error: 'Offert ej hittad' }, { status: 404 });
     }
 
+    // Log the open (minimal: timestamp + quote ref). Skip obvious bots and
+    // email/link-preview prefetchers so the count reflects real customer opens.
+    const ua = (request.headers.get('user-agent') || '').toLowerCase();
+    const isBot = /bot|crawler|spider|preview|whatsapp|slackbot|discord|telegram|facebookexternalhit|bingpreview|google|prerender|headless/.test(ua);
+    if (!isBot) {
+      await supabaseAdmin.from('offer_views').insert({ quote_id: quote.id });
+    }
+
     return NextResponse.json({ quote });
   } catch (err) {
     console.error('Offer GET error:', err);
