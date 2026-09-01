@@ -21,8 +21,9 @@ const supabaseAdmin = createClient(
 const AUTH_URL = 'https://apps.fortnox.se/oauth-v1/auth';
 const TOKEN_URL = 'https://apps.fortnox.se/oauth-v1/token';
 const API_BASE = 'https://api.fortnox.se/3';
-// Scopes: invoices (write), customers (upsert), company info (for verification)
-export const FORTNOX_SCOPES = 'invoice customer companyinformation';
+// Scopes: invoices (write) + customers (upsert). Keep this to what the
+// integration has enabled — requesting an unavailable scope yields invalid_scope.
+export const FORTNOX_SCOPES = 'invoice customer';
 
 const TOKEN_SETTINGS_KEY = 'fortnox_oauth';
 
