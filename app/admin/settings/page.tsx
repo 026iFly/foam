@@ -59,7 +59,7 @@ interface SystemSetting {
   description: string;
 }
 
-type TabType = 'pricing' | 'multipliers' | 'physics' | 'templates' | 'terms' | 'forecast' | 'calendar';
+type TabType = 'pricing' | 'multipliers' | 'physics' | 'templates' | 'terms' | 'forecast' | 'calendar' | 'fortnox';
 
 interface CalendarSyncStatus {
   configured: boolean;
@@ -94,8 +94,33 @@ export default function SettingsPage() {
   const [calendarStatus, setCalendarStatus] = useState<CalendarSyncStatus | null>(null);
   const [calendarLoading, setCalendarLoading] = useState(false);
 
+  // Fortnox
+  const [fortnoxStatus, setFortnoxStatus] = useState<{ configured: boolean; connected: boolean; company?: string | null } | null>(null);
+  const [fortnoxLoading, setFortnoxLoading] = useState(false);
+
+  const fetchFortnoxStatus = async () => {
+    setFortnoxLoading(true);
+    try {
+      const res = await fetch('/api/fortnox/status');
+      if (res.ok) setFortnoxStatus(await res.json());
+    } catch (err) {
+      console.error('Fortnox status error:', err);
+    }
+    setFortnoxLoading(false);
+  };
+
+  const disconnectFortnox = async () => {
+    if (!confirm('Koppla från Fortnox?')) return;
+    await fetch('/api/fortnox/disconnect', { method: 'POST' });
+    fetchFortnoxStatus();
+  };
+
   useEffect(() => {
     loadData();
+    fetchFortnoxStatus();
+    const p = new URLSearchParams(window.location.search).get('fortnox');
+    if (p === 'connected') setMessage('Fortnox ansluten!');
+    else if (p === 'error') setMessage('Fortnox-anslutning misslyckades. Försök igen.');
   }, []);
 
   const loadData = async () => {
@@ -396,6 +421,7 @@ export default function SettingsPage() {
     { id: 'terms', label: 'Villkor' },
     { id: 'forecast', label: 'Prognos' },
     { id: 'calendar', label: 'Google Kalender' },
+    { id: 'fortnox', label: 'Fortnox' },
   ];
 
   if (loading) {
@@ -1358,6 +1384,59 @@ export default function SettingsPage() {
                           </li>
                         </ol>
                       </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Fortnox Tab */}
+              {activeTab === 'fortnox' && (
+                <div className="max-w-2xl">
+                  <h2 className="text-xl font-semibold mb-2 text-gray-900">Fortnox</h2>
+                  <p className="text-gray-700 mb-6">
+                    Anslut till Fortnox för att skapa fakturautkast automatiskt (Intelliray AB).
+                    Fortnox sätter fakturanummer och sköter ROT-rapportering till Skatteverket.
+                    Fakturor skapas som <strong>utkast</strong> – du granskar och skickar dem i Fortnox.
+                  </p>
+
+                  {fortnoxLoading && <p className="text-gray-600">Hämtar status…</p>}
+
+                  {!fortnoxLoading && fortnoxStatus && !fortnoxStatus.configured && (
+                    <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded mb-4">
+                      <p className="text-yellow-800 font-medium">Inte konfigurerad</p>
+                      <p className="text-sm text-yellow-700 mt-1">
+                        Sätt miljövariablerna <code>FORTNOX_CLIENT_ID</code> och{' '}
+                        <code>FORTNOX_CLIENT_SECRET</code> i Vercel, och registrera redirect-URL{' '}
+                        <code>https://www.intellifoam.se/api/fortnox/callback</code> i Fortnox-integrationen.
+                      </p>
+                    </div>
+                  )}
+
+                  {!fortnoxLoading && fortnoxStatus?.configured && !fortnoxStatus.connected && (
+                    <a
+                      href="/api/fortnox/connect"
+                      className="inline-flex items-center gap-2 bg-green-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-green-700 transition"
+                    >
+                      Anslut Fortnox
+                    </a>
+                  )}
+
+                  {!fortnoxLoading && fortnoxStatus?.connected && (
+                    <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded">
+                      <p className="text-green-800 font-medium">
+                        Ansluten{fortnoxStatus.company ? ` – ${fortnoxStatus.company}` : ''}
+                      </p>
+                      {fortnoxStatus.company && fortnoxStatus.company !== 'Intelliray AB' && (
+                        <p className="text-sm text-red-600 mt-1">
+                          OBS: anslutet bolag är &quot;{fortnoxStatus.company}&quot;, inte Intelliray AB. Koppla från och anslut rätt Fortnox-bolag.
+                        </p>
+                      )}
+                      <button
+                        onClick={disconnectFortnox}
+                        className="mt-3 text-sm text-red-600 hover:text-red-700 font-medium"
+                      >
+                        Koppla från
+                      </button>
                     </div>
                   )}
                 </div>
