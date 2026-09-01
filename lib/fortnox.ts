@@ -68,6 +68,28 @@ export async function isFortnoxConnected(): Promise<boolean> {
   return (await readTokens()) !== null;
 }
 
+const STATE_SETTINGS_KEY = 'fortnox_oauth_state';
+
+/** Persist the OAuth CSRF state server-side (robust to cross-host cookie loss). */
+export async function saveOAuthState(state: string): Promise<void> {
+  await supabaseAdmin
+    .from('system_settings')
+    .upsert({ key: STATE_SETTINGS_KEY, value: { state, ts: Date.now() } }, { onConflict: 'key' });
+}
+
+/** Read the stored OAuth state; valid for 10 minutes. */
+export async function readOAuthState(): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from('system_settings')
+    .select('value')
+    .eq('key', STATE_SETTINGS_KEY)
+    .single();
+  if (!data?.value) return null;
+  const v = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+  if (!v?.state || !v?.ts || Date.now() - v.ts > 600_000) return null;
+  return v.state as string;
+}
+
 export async function disconnectFortnox(): Promise<void> {
   await supabaseAdmin.from('system_settings').delete().eq('key', TOKEN_SETTINGS_KEY);
 }

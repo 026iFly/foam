@@ -118,9 +118,13 @@ export default function SettingsPage() {
   useEffect(() => {
     loadData();
     fetchFortnoxStatus();
-    const p = new URLSearchParams(window.location.search).get('fortnox');
+    const sp = new URLSearchParams(window.location.search);
+    const p = sp.get('fortnox');
     if (p === 'connected') setMessage('Fortnox ansluten!');
-    else if (p === 'error') setMessage('Fortnox-anslutning misslyckades. Försök igen.');
+    else if (p === 'error') {
+      const reason = sp.get('reason');
+      setMessage(`Fortnox-anslutning misslyckades${reason ? ` (${reason})` : ''}. Försök igen.`);
+    }
   }, []);
 
   const loadData = async () => {
