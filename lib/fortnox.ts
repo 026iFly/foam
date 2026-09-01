@@ -98,7 +98,9 @@ export async function disconnectFortnox(): Promise<void> {
 /** Build the Fortnox authorization URL to redirect the admin to. */
 export function buildAuthorizationUrl(state: string): string {
   const { clientId, redirectUri } = getFortnoxConfig();
-  const params = new URLSearchParams({
+  // Build the query manually so the space in `scope` is encoded as %20, not `+`.
+  // Fortnox's OAuth server rejects `+` as the scope delimiter (invalid_scope).
+  const params: Record<string, string> = {
     client_id: clientId || '',
     redirect_uri: redirectUri,
     scope: FORTNOX_SCOPES,
@@ -106,8 +108,11 @@ export function buildAuthorizationUrl(state: string): string {
     access_type: 'offline',
     response_type: 'code',
     account_type: 'service',
-  });
-  return `${AUTH_URL}?${params.toString()}`;
+  };
+  const query = Object.entries(params)
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join('&');
+  return `${AUTH_URL}?${query}`;
 }
 
 function basicAuthHeader(): string {
