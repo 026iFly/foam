@@ -37,6 +37,7 @@ interface ParsedQuote extends Omit<QuoteRequest, 'calculation_data' | 'adjusted_
   adjusted_data: CalculationData | null;
   offer_views_count?: number;
   offer_last_viewed_at?: string | null;
+  fortnox_ref?: { documentNumber: string; projectNumber: string; url?: string } | null;
 }
 
 export default function QuoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -569,6 +570,33 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
 
   const handleGeneratePDF = async () => {
     window.open(`/api/admin/quotes/${id}/pdf`, '_blank');
+  };
+
+  const [creatingInvoice, setCreatingInvoice] = useState(false);
+
+  const handleCreateFortnoxInvoice = async () => {
+    if (!confirm('Skapa ett fakturautkast och projekt i Fortnox (Intelliray AB)? Fakturan skapas som utkast – du granskar och skickar den i Fortnox.')) {
+      return;
+    }
+    setCreatingInvoice(true);
+    try {
+      const response = await fetch(`/api/admin/quotes/${id}/create-fortnox-invoice`, { method: 'POST' });
+      const data = await response.json();
+      if (response.ok) {
+        await fetchQuote();
+        alert(
+          data.alreadyExists
+            ? `Fakturautkast finns redan (faktura ${data.ref.documentNumber}, projekt ${data.ref.projectNumber}).`
+            : `Fakturautkast skapat i Fortnox: faktura ${data.ref.documentNumber}, projekt ${data.ref.projectNumber}. Granska och skicka i Fortnox.`
+        );
+      } else {
+        alert(`Fel: ${data.error || 'Kunde inte skapa faktura'}`);
+      }
+    } catch (error) {
+      console.error('Create Fortnox invoice error:', error);
+      alert('Ett fel uppstod vid skapande av faktura');
+    }
+    setCreatingInvoice(false);
   };
 
   const [sendingOffer, setSendingOffer] = useState(false);
@@ -1430,6 +1458,33 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
                     )}
                   </>
                 )}
+
+                {/* Fortnox invoice */}
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-2">Fakturering (Fortnox)</h3>
+                  {quote.fortnox_ref?.documentNumber ? (
+                    <div className="text-sm text-gray-700">
+                      Fakturautkast skapat: <span className="font-medium">#{quote.fortnox_ref.documentNumber}</span>
+                      {quote.fortnox_ref.projectNumber && <> · projekt {quote.fortnox_ref.projectNumber}</>}
+                      <a
+                        href={quote.fortnox_ref.url || 'https://apps.fortnox.se'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block text-green-600 hover:text-green-700 mt-1"
+                      >
+                        Öppna i Fortnox →
+                      </a>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleCreateFortnoxInvoice}
+                      disabled={creatingInvoice}
+                      className="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-semibold hover:bg-indigo-700 transition disabled:bg-gray-400"
+                    >
+                      {creatingInvoice ? 'Skapar i Fortnox...' : 'Skapa fakturautkast i Fortnox'}
+                    </button>
+                  )}
+                </div>
 
                 {/* Booking Buttons */}
                 <div className="border-t border-gray-200 pt-4 mt-4">
