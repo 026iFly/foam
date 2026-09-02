@@ -108,26 +108,25 @@ async function upsertCustomer(input: {
   return num;
 }
 
-async function createProject(description: string, startDate: string, fallbackNumber: string): Promise<string> {
-  // Fortnox Project.Description max length is short (~50 chars).
-  const base = { Description: description.slice(0, 50), StartDate: startDate, Status: 'ONGOING' };
-  // Prefer Fortnox auto-numbering; fall back to a deterministic number if required.
+async function getOrCreateProject(projectNumber: string, description: string, startDate: string): Promise<string> {
+  // Idempotent per quote: reuse the deterministic project number if it already
+  // exists (so retries don't pile up duplicate projects in Fortnox).
   try {
-    const created = (await fortnoxFetch('/projects', {
-      method: 'POST',
-      body: JSON.stringify({ Project: base }),
-    })) as FortnoxProject;
-    if (created.Project?.ProjectNumber) return created.Project.ProjectNumber;
-    throw new Error('no project number returned');
+    const existing = (await fortnoxFetch(`/projects/${encodeURIComponent(projectNumber)}`)) as FortnoxProject;
+    if (existing.Project?.ProjectNumber) return existing.Project.ProjectNumber;
   } catch {
-    const created = (await fortnoxFetch('/projects', {
-      method: 'POST',
-      body: JSON.stringify({ Project: { ...base, ProjectNumber: fallbackNumber } }),
-    })) as FortnoxProject;
-    const num = created.Project?.ProjectNumber;
-    if (!num) throw new Error('Kunde inte skapa projekt i Fortnox');
-    return num;
+    // Not found — create it below.
   }
+  // Fortnox Project.Description max length is short (~50 chars).
+  const created = (await fortnoxFetch('/projects', {
+    method: 'POST',
+    body: JSON.stringify({
+      Project: { ProjectNumber: projectNumber, Description: description.slice(0, 50), StartDate: startDate, Status: 'ONGOING' },
+    }),
+  })) as FortnoxProject;
+  const num = created.Project?.ProjectNumber;
+  if (!num) throw new Error('Kunde inte skapa projekt i Fortnox');
+  return num;
 }
 
 /**
@@ -175,10 +174,12 @@ export async function createInstallationInvoiceDraft(quoteId: number): Promise<F
 
   // --- Project (start = offertförfrågan date) ---
   const startDate = (quote.created_at || new Date().toISOString()).slice(0, 10);
-  const projectNumber = await createProject(
+  // Deterministic numeric project number per quote (far from Fortnox's own
+  // low-numbered series) so retries reuse the same project.
+  const projectNumber = await getOrCreateProject(
+    String(90000 + quoteId),
     `Sprutisolering – ${quote.customer_name}`,
-    startDate,
-    `IF${quoteId}`
+    startDate
   );
 
   // --- Invoice rows (prices excl VAT; VAT 25%) ---
