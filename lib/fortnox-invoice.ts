@@ -58,6 +58,18 @@ async function findCustomerByOrgNr(orgnr: string): Promise<string | null> {
   }
 }
 
+async function findCustomerByEmail(email: string): Promise<string | null> {
+  if (!email) return null;
+  try {
+    const data = (await fortnoxFetch(
+      `/customers?email=${encodeURIComponent(email)}`
+    )) as FortnoxCustomerList;
+    return data.Customers?.[0]?.CustomerNumber ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function upsertCustomer(input: {
   name: string;
   orgnr: string;
@@ -68,6 +80,10 @@ async function upsertCustomer(input: {
 }): Promise<string> {
   if (input.orgnr) {
     const existing = await findCustomerByOrgNr(input.orgnr);
+    if (existing) return existing;
+  }
+  if (input.email) {
+    const existing = await findCustomerByEmail(input.email);
     if (existing) return existing;
   }
   const { Address1, ZipCode, City } = parseAddress(input.address);
@@ -93,7 +109,8 @@ async function upsertCustomer(input: {
 }
 
 async function createProject(description: string, startDate: string, fallbackNumber: string): Promise<string> {
-  const base = { Description: description.slice(0, 200), StartDate: startDate, Status: 'ONGOING' };
+  // Fortnox Project.Description max length is short (~50 chars).
+  const base = { Description: description.slice(0, 50), StartDate: startDate, Status: 'ONGOING' };
   // Prefer Fortnox auto-numbering; fall back to a deterministic number if required.
   try {
     const created = (await fortnoxFetch('/projects', {
@@ -159,7 +176,7 @@ export async function createInstallationInvoiceDraft(quoteId: number): Promise<F
   // --- Project (start = offertförfrågan date) ---
   const startDate = (quote.created_at || new Date().toISOString()).slice(0, 10);
   const projectNumber = await createProject(
-    `Sprutisolering – ${quote.customer_name}${quote.customer_address ? `, ${quote.customer_address}` : ''}`,
+    `Sprutisolering – ${quote.customer_name}`,
     startDate,
     `IF${quoteId}`
   );
