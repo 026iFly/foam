@@ -188,54 +188,38 @@ export async function createInstallationInvoiceDraft(quoteId: number): Promise<F
     Math.round((totals.sprayHours || 0) + (totals.setupHours || 0) + (totals.switchingHours || 0))
   );
 
-  type Row = {
-    Description: string;
-    DeliveredQuantity: string;
-    Price: number;
-    Unit: string;
-    VAT: number;
-    HouseWork: boolean;
-    HouseWorkType: string;
-    HouseWorkHoursToReport?: number;
-  };
-  const rows: Row[] = [];
+  // Invoice-level HouseWork is read-only in Fortnox (derived from the rows), so
+  // it's never sent. Row-level housework fields are only included for ROT jobs;
+  // when the invoice has any housework row, every row must carry a HouseWorkType.
+  const hw = (isWork: boolean): Record<string, unknown> =>
+    isRot
+      ? {
+          HouseWork: isWork,
+          HouseWorkType: isWork ? 'CONSTRUCTION' : 'EMPTYHOUSEWORK',
+          ...(isWork ? { HouseWorkHoursToReport: labourHours } : {}),
+        }
+      : {};
+
+  const rows: Record<string, unknown>[] = [];
 
   const material = round(totals.materialCostTotal);
   if (material > 0) {
-    rows.push({
-      Description: 'Sprutisolering – material',
-      DeliveredQuantity: '1', Price: material, Unit: 'st', VAT: 25,
-      HouseWork: false, HouseWorkType: 'EMPTYHOUSEWORK',
-    });
+    rows.push({ Description: 'Sprutisolering – material', DeliveredQuantity: '1', Price: material, Unit: 'st', VAT: 25, ...hw(false) });
   }
 
   const labour = round(totals.laborCostTotal);
   if (labour > 0) {
-    rows.push({
-      Description: 'Sprutisolering – arbete (montage)',
-      DeliveredQuantity: '1', Price: labour, Unit: 'st', VAT: 25,
-      HouseWork: isRot,
-      HouseWorkType: isRot ? 'CONSTRUCTION' : 'EMPTYHOUSEWORK',
-      ...(isRot ? { HouseWorkHoursToReport: labourHours } : {}),
-    });
+    rows.push({ Description: 'Sprutisolering – arbete (montage)', DeliveredQuantity: '1', Price: labour, Unit: 'st', VAT: 25, ...hw(true) });
   }
 
   const travel = round(totals.travelCost);
   if (travel > 0) {
-    rows.push({
-      Description: 'Resa och etablering',
-      DeliveredQuantity: '1', Price: travel, Unit: 'st', VAT: 25,
-      HouseWork: false, HouseWorkType: 'EMPTYHOUSEWORK',
-    });
+    rows.push({ Description: 'Resa och etablering', DeliveredQuantity: '1', Price: travel, Unit: 'st', VAT: 25, ...hw(false) });
   }
 
   const generator = round(totals.generatorCost);
   if (generator > 0) {
-    rows.push({
-      Description: 'Elverk',
-      DeliveredQuantity: '1', Price: generator, Unit: 'st', VAT: 25,
-      HouseWork: false, HouseWorkType: 'EMPTYHOUSEWORK',
-    });
+    rows.push({ Description: 'Elverk', DeliveredQuantity: '1', Price: generator, Unit: 'st', VAT: 25, ...hw(false) });
   }
 
   // ROT applicant details for the user to file husarbete when sending in Fortnox
@@ -256,7 +240,6 @@ export async function createInstallationInvoiceDraft(quoteId: number): Promise<F
       InvoiceDate: stockholmToday(),
       VATIncluded: false,
       Project: projectNumber,
-      HouseWork: isRot,
       Comments: comment,
       InvoiceRows: rows,
     },
