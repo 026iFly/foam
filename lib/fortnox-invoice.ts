@@ -58,6 +58,49 @@ async function findCustomerByOrgNr(orgnr: string): Promise<string | null> {
   }
 }
 
+/** Format a Swedish personnummer as Fortnox expects: YYYYMMDD-XXXX. */
+function formatPersonnummer(pnr: string): string {
+  const d = (pnr || '').replace(/\D/g, '');
+  if (d.length === 12) return `${d.slice(0, 8)}-${d.slice(8)}`;
+  if (d.length === 10) return `${d.slice(0, 6)}-${d.slice(6)}`;
+  return pnr;
+}
+
+/**
+ * Create the ROT tax-reduction record(s) linking the invoice to Skatteverket:
+ * one per applicant, carrying personnummer, fastighetsbeteckning and their share
+ * of the ROT amount. Best-effort — the invoice is already created if this fails.
+ */
+async function createRotTaxReductions(
+  documentNumber: string,
+  applicants: Array<{ name: string; personnummer: string; share: number }>,
+  propertyDesignation: string,
+  totalRot: number
+): Promise<void> {
+  for (const a of applicants) {
+    const asked = Math.round((totalRot * (a.share || 0)) / 100);
+    if (asked <= 0) continue;
+    try {
+      await fortnoxFetch('/taxreductions', {
+        method: 'POST',
+        body: JSON.stringify({
+          TaxReduction: {
+            ReferenceDocumentType: 'INVOICE',
+            ReferenceNumber: String(documentNumber),
+            CustomerName: a.name,
+            SocialSecurityNumber: formatPersonnummer(a.personnummer),
+            PropertyDesignation: propertyDesignation || undefined,
+            AskedAmount: asked,
+            WorkType: 'CONSTRUCTION',
+          },
+        }),
+      });
+    } catch (err) {
+      console.error('Fortnox taxreduction create failed for', a.name, err);
+    }
+  }
+}
+
 async function findCustomerByEmail(email: string): Promise<string | null> {
   if (!email) return null;
   try {
@@ -253,6 +296,16 @@ export async function createInstallationInvoiceDraft(quoteId: number): Promise<F
 
   const documentNumber = created.Invoice?.DocumentNumber;
   if (!documentNumber) throw new Error('Kunde inte skapa faktura i Fortnox');
+
+  // Attach ROT tax-reduction record(s) with personnummer + fastighetsbeteckning.
+  if (isRot && rotInfo?.customers?.length) {
+    await createRotTaxReductions(
+      documentNumber,
+      rotInfo.customers,
+      rotInfo.fastighetsbeteckning || '',
+      round(totals.rotDeduction)
+    );
+  }
 
   return {
     documentNumber,
