@@ -7,14 +7,14 @@ This folder contains all important documents related to the spray foam insulatio
 ### `/product-specs`
 Technical specifications and datasheets for the foam products we use.
 
-- **Closed-cell polyurethane foam A B (1).pdf** - DMJ-Spray500 specifications
+- **Closed-cell polyurethane foam A B.pdf** - DMJ-Spray500 specifications
   - Density: 30-55 kg/m³
   - K-Factor: ≤24 mW/(m·K)
   - Compressive Strength: ≥150 KPa
   - Closed-cell Rate: ≥90%
   - Fire resistance: Class B2
 
-- **Open Cell polyurethane foam A B (1).pdf** - DmjSpray-501F specifications
+- **Open Cell polyurethane foam A B.pdf** - DmjSpray-501F specifications
   - Density: 8-12 kg/m³
   - K-Factor: ≤40 mW/(m·K)
   - Compressive Strength: ≥13 KPa
