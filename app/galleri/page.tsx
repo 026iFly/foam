@@ -41,10 +41,21 @@ export default async function GalleryPage() {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {projects.map((project) => (
                 <div key={project.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-                  {project.image_url && (
+                  {project.before_image_url && project.after_image_url ? (
+                    <div className="grid grid-cols-2">
+                      <div className="relative h-48 bg-gray-200">
+                        <Image src={project.before_image_url} alt={`${project.title} – före`} fill className="object-cover" />
+                        <span className="absolute top-2 left-2 bg-black/60 text-white text-xs font-medium px-2 py-0.5 rounded">Före</span>
+                      </div>
+                      <div className="relative h-48 bg-gray-200">
+                        <Image src={project.after_image_url} alt={`${project.title} – efter`} fill className="object-cover" />
+                        <span className="absolute top-2 left-2 bg-green-600 text-white text-xs font-medium px-2 py-0.5 rounded">Efter</span>
+                      </div>
+                    </div>
+                  ) : (project.image_url || project.after_image_url) && (
                     <div className="relative h-48 bg-gray-200">
                       <Image
-                        src={project.image_url}
+                        src={(project.image_url || project.after_image_url) as string}
                         alt={project.title}
                         fill
                         className="object-cover"

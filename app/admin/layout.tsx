@@ -61,6 +61,12 @@ export default async function AdminLayout({
                   Rapporter
                 </Link>
                 <Link
+                  href="/admin/gallery"
+                  className="text-sm text-gray-600 hover:text-gray-900"
+                >
+                  Galleri
+                </Link>
+                <Link
                   href="/admin/settings"
                   className="text-sm text-gray-600 hover:text-gray-900"
                 >
@@ -153,6 +159,12 @@ export default async function AdminLayout({
             className="text-sm text-gray-600 hover:text-gray-900 whitespace-nowrap"
           >
             Rapporter
+          </Link>
+          <Link
+            href="/admin/gallery"
+            className="text-sm text-gray-600 hover:text-gray-900 whitespace-nowrap"
+          >
+            Galleri
           </Link>
           <Link
             href="/admin/settings"
