@@ -21,6 +21,13 @@ Technical specifications and datasheets for the foam products we use.
   - Open-cell Rate: ≥99%
   - Sound Absorption: 0.43%
 
+- **Blend-Polyols-MSDS-262680101401.pdf** - Safety Data Sheet for the polyol blend (Jinan Jiuxu Technology, eff. 2026-01-01)
+  - Composition: polyether polyol 68% + polyester polyol 20% + **water 12%** (CAS 7732-18-5) → **water-blown, no HCFC-141b / ODS**
+  - Section 15: Montreal Protocol — not listed. GHS: not classified.
+
+- **CE-Machinery-Directive-Attestation-UDEM.pdf** - CE Attestation of Conformity (UDEM, no. M.2025.206.C131088, valid to 2030-12-08)
+  - Scope: **Machinery Directive 2006/42/EC** for the JX-* spray machines — NOT a foam/construction-product certification
+
 ### `/quotes`
 Real quotes and pricing examples from suppliers and competitors.
 
