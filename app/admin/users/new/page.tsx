@@ -2,7 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { PageHeader, Card, CardBody, Button } from '@/app/components/ui';
+
+const inputCls =
+  'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white ' +
+  'focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent';
+const labelCls = 'block text-sm font-medium text-gray-700 mb-1';
 
 export default function NewUserPage() {
   const [email, setEmail] = useState('');
@@ -46,41 +51,32 @@ export default function NewUserPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="container mx-auto px-4">
-        <div className="max-w-xl mx-auto">
-          <div className="mb-8">
-            <Link
-              href="/admin/users"
-              className="text-blue-600 hover:text-blue-800"
-            >
-              Tillbaka till användare
-            </Link>
+    <div className="p-6 md:p-8 max-w-7xl">
+      <div className="max-w-xl">
+        <PageHeader
+          title="Bjud in ny användare"
+          backHref="/admin/users"
+          backLabel="Tillbaka till användare"
+        />
+
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+            {error}
           </div>
+        )}
 
-          <h1 className="text-3xl font-bold text-gray-800 mb-8">
-            Bjud in ny användare
-          </h1>
-
-          {error && (
-            <div className="mb-6 p-4 bg-red-100 text-red-700 rounded-lg">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit}>
-            <div className="bg-white rounded-lg shadow-md p-6">
+        <form onSubmit={handleSubmit}>
+          <Card>
+            <CardBody>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    E-post *
-                  </label>
+                  <label className={labelCls}>E-post *</label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                    className={inputCls}
                     placeholder="namn@foretag.se"
                   />
                   <p className="text-sm text-gray-700 mt-1">
@@ -90,37 +86,31 @@ export default function NewUserPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Förnamn
-                    </label>
+                    <label className={labelCls}>Förnamn</label>
                     <input
                       type="text"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                      className={inputCls}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Efternamn
-                    </label>
+                    <label className={labelCls}>Efternamn</label>
                     <input
                       type="text"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                      className={inputCls}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Roll *
-                  </label>
+                  <label className={labelCls}>Roll *</label>
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                    className={inputCls}
                   >
                     <option value="installer">Installatör</option>
                     <option value="admin">Admin</option>
@@ -131,24 +121,17 @@ export default function NewUserPage() {
                 </div>
               </div>
 
-              <div className="mt-6 flex gap-4">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex-1 bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:bg-gray-400"
-                >
+              <div className="mt-6 flex gap-3">
+                <Button type="submit" disabled={saving} className="flex-1">
                   {saving ? 'Skickar...' : 'Skicka inbjudan'}
-                </button>
-                <Link
-                  href="/admin/users"
-                  className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition text-center"
-                >
+                </Button>
+                <Button href="/admin/users" variant="secondary" className="flex-1">
                   Avbryt
-                </Link>
+                </Button>
               </div>
-            </div>
-          </form>
-        </div>
+            </CardBody>
+          </Card>
+        </form>
       </div>
     </div>
   );

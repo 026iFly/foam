@@ -59,7 +59,7 @@ export default function CustomerVerifyPage() {
               value={surname}
               onChange={(e) => setSurname(e.target.value)}
               placeholder="Efternamn"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-green-600 focus:border-green-500"
               autoFocus
               required
             />
@@ -72,7 +72,7 @@ export default function CustomerVerifyPage() {
           <button
             type="submit"
             disabled={loading || !surname.trim()}
-            className="w-full bg-blue-600 text-white rounded-lg py-3 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-green-700 text-white rounded-lg py-3 text-sm font-medium hover:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Verifierar...' : 'Logga in'}
           </button>

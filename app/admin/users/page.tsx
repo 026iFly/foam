@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { PageHeader, Card, Badge, Button, Skeleton, EmptyState } from '@/app/components/ui';
 
 interface UserProfile {
   id: string;
@@ -43,54 +43,52 @@ export default function UsersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-900">Laddar...</div>
+      <div className="p-6 md:p-8 max-w-7xl">
+        <Skeleton className="h-8 w-48 mb-6" />
+        <Card className="p-5 flex flex-col gap-3">
+          <Skeleton className="h-5 w-full" />
+          <Skeleton className="h-5 w-full" />
+          <Skeleton className="h-5 w-2/3" />
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="container mx-auto px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800">Användare</h1>
-            <Link
-              href="/admin/users/new"
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
-            >
-              Bjud in användare
-            </Link>
-          </div>
+    <div className="p-6 md:p-8 max-w-7xl">
+      <PageHeader
+        title="Användare"
+        subtitle="Hantera konton och roller för admin och installatörer"
+        actions={<Button href="/admin/users/new">Bjud in användare</Button>}
+      />
 
-          {error && (
-            <div className="mb-6 p-4 bg-red-100 text-red-700 rounded-lg">
-              {error}
-            </div>
-          )}
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
 
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      {users.length === 0 ? (
+        <EmptyState
+          title="Inga användare hittades"
+          action={<Button href="/admin/users/new" variant="secondary">Bjud in användare</Button>}
+        />
+      ) : (
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-700">
-                    Användare
-                  </th>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-700">
-                    Roll
-                  </th>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-gray-700">
-                    Skapad
-                  </th>
-                  <th className="text-right px-6 py-3 text-sm font-medium text-gray-700">
-                    Åtgärder
-                  </th>
+              <thead>
+                <tr className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  <th className="text-left px-5 py-3">Användare</th>
+                  <th className="text-left px-5 py-3">Roll</th>
+                  <th className="text-left px-5 py-3">Skapad</th>
+                  <th className="text-right px-5 py-3">Åtgärder</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody>
                 {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
+                  <tr key={user.id} className="border-t border-gray-100 hover:bg-gray-50">
+                    <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         {user.profile_photo_url ? (
                           <img
@@ -99,8 +97,8 @@ export default function UsersPage() {
                             className="w-10 h-10 rounded-full object-cover"
                           />
                         ) : (
-                          <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-                            <span className="text-gray-600">
+                          <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                            <span className="text-sm font-semibold text-green-800">
                               {user.first_name?.[0] || user.email[0].toUpperCase()}
                             </span>
                           </div>
@@ -115,42 +113,26 @@ export default function UsersPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-medium rounded ${
-                          user.role === 'admin'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
+                    <td className="px-5 py-4">
+                      <Badge variant={user.role === 'admin' ? 'info' : 'neutral'}>
                         {user.role === 'admin' ? 'Admin' : 'Installatör'}
-                      </span>
+                      </Badge>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-700">
+                    <td className="px-5 py-4 text-sm text-gray-700">
                       {new Date(user.created_at).toLocaleDateString('sv-SE')}
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <Link
-                        href={`/admin/users/${user.id}`}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
+                    <td className="px-5 py-4 text-right">
+                      <Button href={`/admin/users/${user.id}`} variant="ghost" size="sm">
                         Redigera
-                      </Link>
+                      </Button>
                     </td>
                   </tr>
                 ))}
-                {users.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-8 text-center text-gray-700">
-                      Inga användare hittades
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
-        </div>
-      </div>
+        </Card>
+      )}
     </div>
   );
 }

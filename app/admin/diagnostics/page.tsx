@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { PageHeader, Card, CardHeader, CardBody, Badge, Button, Skeleton, cn } from '@/app/components/ui';
+import type { BadgeVariant } from '@/app/components/ui';
 
 interface NotificationLog {
   id: number;
@@ -18,6 +20,10 @@ interface SystemStatus {
   email_configured: boolean;
   discord_configured: boolean;
 }
+
+const selectCls =
+  'border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white ' +
+  'focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent';
 
 export default function DiagnosticsPage() {
   const [logs, setLogs] = useState<NotificationLog[]>([]);
@@ -70,73 +76,79 @@ export default function DiagnosticsPage() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusVariant = (status: string): BadgeVariant => {
     switch (status) {
-      case 'sent': return 'bg-green-100 text-green-800';
-      case 'failed': return 'bg-red-100 text-red-800';
-      case 'skipped': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'sent': return 'success';
+      case 'failed': return 'danger';
+      case 'skipped': return 'warning';
+      default: return 'neutral';
     }
   };
 
-  const getChannelBadge = (channel: string) => {
+  const getChannelVariant = (channel: string): BadgeVariant => {
     switch (channel) {
-      case 'email': return 'bg-blue-100 text-blue-800';
-      case 'discord': return 'bg-purple-100 text-purple-800';
-      case 'in_app': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'email': return 'info';
+      default: return 'neutral';
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-700">Laddar diagnostik...</div>
+      <div className="p-6 md:p-8 max-w-7xl">
+        <Skeleton className="h-8 w-40 mb-6" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+        <Skeleton className="h-64 w-full" />
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Diagnostik</h1>
+    <div className="p-6 md:p-8 max-w-7xl">
+      <PageHeader title="Diagnostik" subtitle="Status för notifieringskanaler och logg över skickade meddelanden" />
 
       {/* System Status */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-sm font-medium text-gray-700 mb-2">E-post (SMTP)</div>
-          <div className="flex items-center justify-between">
-            <span className={`px-2 py-1 rounded text-sm font-medium ${systemStatus?.email_configured ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+        <Card className="p-5">
+          <div className="text-sm font-medium text-gray-600 mb-3">E-post (SMTP)</div>
+          <div className="flex items-center justify-between gap-3">
+            <Badge variant={systemStatus?.email_configured ? 'success' : 'danger'}>
               {systemStatus?.email_configured ? 'Konfigurerad' : 'Ej konfigurerad'}
-            </span>
-            <button
+            </Badge>
+            <Button
               onClick={() => sendTest('email')}
               disabled={testing === 'email'}
-              className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50"
+              variant="secondary"
+              size="sm"
             >
               {testing === 'email' ? 'Skickar...' : 'Testa'}
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-sm font-medium text-gray-700 mb-2">Discord Webhook</div>
-          <div className="flex items-center justify-between">
-            <span className={`px-2 py-1 rounded text-sm font-medium ${systemStatus?.discord_configured ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+        <Card className="p-5">
+          <div className="text-sm font-medium text-gray-600 mb-3">Discord Webhook</div>
+          <div className="flex items-center justify-between gap-3">
+            <Badge variant={systemStatus?.discord_configured ? 'success' : 'danger'}>
               {systemStatus?.discord_configured ? 'Konfigurerad' : 'Ej konfigurerad'}
-            </span>
-            <button
+            </Badge>
+            <Button
               onClick={() => sendTest('discord')}
               disabled={testing === 'discord'}
-              className="px-3 py-1 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 disabled:opacity-50"
+              variant="secondary"
+              size="sm"
             >
               {testing === 'discord' ? 'Skickar...' : 'Testa'}
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-sm font-medium text-gray-700 mb-2">Senaste 24h</div>
-          <div className="flex gap-4 text-sm">
+        <Card className="p-5">
+          <div className="text-sm font-medium text-gray-600 mb-3">Senaste 24h</div>
+          <div className="flex gap-5 text-sm">
             <div>
               <span className="text-gray-600">Skickade:</span>{' '}
               <span className="font-semibold text-green-700">{logs.filter(l => l.status === 'sent' && new Date(l.created_at) > new Date(Date.now() - 86400000)).length}</span>
@@ -146,25 +158,30 @@ export default function DiagnosticsPage() {
               <span className="font-semibold text-red-700">{logs.filter(l => l.status === 'failed' && new Date(l.created_at) > new Date(Date.now() - 86400000)).length}</span>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Test Result */}
       {testResult && (
-        <div className={`mb-4 p-3 rounded ${testResult.message.includes('skickat') || testResult.message.includes('skickat') ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+        <div className={cn(
+          'mb-4 p-3 rounded-lg text-sm border',
+          testResult.message.includes('skickat') || testResult.message.includes('skickat')
+            ? 'bg-green-50 text-green-800 border-green-200'
+            : 'bg-red-50 text-red-800 border-red-200'
+        )}>
           {testResult.message}
         </div>
       )}
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4 mb-4">
-        <div className="flex gap-4 items-center">
-          <div>
-            <label className="text-sm font-medium text-gray-700 mr-2">Kanal:</label>
+      <Card className="p-4 mb-4">
+        <div className="flex flex-wrap gap-4 items-center">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">Kanal:</label>
             <select
               value={filterChannel}
               onChange={(e) => setFilterChannel(e.target.value)}
-              className="border border-gray-300 rounded px-2 py-1 text-sm text-gray-900"
+              className={selectCls}
             >
               <option value="">Alla</option>
               <option value="email">E-post</option>
@@ -172,12 +189,12 @@ export default function DiagnosticsPage() {
               <option value="in_app">In-app</option>
             </select>
           </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700 mr-2">Status:</label>
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">Status:</label>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="border border-gray-300 rounded px-2 py-1 text-sm text-gray-900"
+              className={selectCls}
             >
               <option value="">Alla</option>
               <option value="sent">Skickad</option>
@@ -186,49 +203,43 @@ export default function DiagnosticsPage() {
             </select>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Notification Log */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="px-6 py-4 border-b bg-gray-50">
-          <h2 className="text-lg font-semibold text-gray-900">Notifieringslogg</h2>
-        </div>
+      <Card className="overflow-hidden">
+        <CardHeader title="Notifieringslogg" />
         {logs.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Tid</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Kanal</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Händelse</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Mottagare</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Ref</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Fel</th>
+            <table className="min-w-full">
+              <thead>
+                <tr className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  <th className="px-5 py-3 text-left">Tid</th>
+                  <th className="px-5 py-3 text-left">Kanal</th>
+                  <th className="px-5 py-3 text-left">Händelse</th>
+                  <th className="px-5 py-3 text-left">Mottagare</th>
+                  <th className="px-5 py-3 text-left">Ref</th>
+                  <th className="px-5 py-3 text-left">Status</th>
+                  <th className="px-5 py-3 text-left">Fel</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody>
                 {logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                  <tr key={log.id} className="border-t border-gray-100 hover:bg-gray-50">
+                    <td className="px-5 py-3 text-sm text-gray-700 whitespace-nowrap">
                       {new Date(log.created_at).toLocaleString('sv-SE')}
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${getChannelBadge(log.channel)}`}>
-                        {log.channel}
-                      </span>
+                    <td className="px-5 py-3">
+                      <Badge variant={getChannelVariant(log.channel)}>{log.channel}</Badge>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{log.event_type}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700 max-w-[200px] truncate">{log.recipient}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">
+                    <td className="px-5 py-3 text-sm text-gray-900">{log.event_type}</td>
+                    <td className="px-5 py-3 text-sm text-gray-700 max-w-[200px] truncate">{log.recipient}</td>
+                    <td className="px-5 py-3 text-sm text-gray-700">
                       {log.reference_type && log.reference_id ? `${log.reference_type}#${log.reference_id}` : '-'}
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusBadge(log.status)}`}>
-                        {log.status}
-                      </span>
+                    <td className="px-5 py-3">
+                      <Badge variant={getStatusVariant(log.status)}>{log.status}</Badge>
                     </td>
-                    <td className="px-4 py-3 text-sm text-red-700 max-w-[200px] truncate" title={log.error_message || ''}>
+                    <td className="px-5 py-3 text-sm text-red-700 max-w-[200px] truncate" title={log.error_message || ''}>
                       {log.error_message || '-'}
                     </td>
                   </tr>
@@ -237,11 +248,11 @@ export default function DiagnosticsPage() {
             </table>
           </div>
         ) : (
-          <div className="px-6 py-8 text-center text-gray-600">
+          <CardBody className="py-10 text-center text-gray-700">
             Inga loggposter hittades.
-          </div>
+          </CardBody>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

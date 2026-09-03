@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { PageHeader, Card, CardHeader, CardBody, Button, Skeleton, EmptyState } from '@/app/components/ui';
 
 interface Project {
   id: number;
@@ -14,6 +15,11 @@ interface Project {
   area_size: number | null;
   completion_date: string | null;
 }
+
+const inputCls =
+  'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white ' +
+  'focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent';
+const labelCls = 'block text-sm font-medium text-gray-700 mb-1';
 
 // Client-side "basic optimization": resize to max 1600px, mild brightness/
 // contrast/saturation, and compress to JPEG for the web.
@@ -148,7 +154,7 @@ export default function AdminGalleryPage() {
     setUrl: (u: string) => void, setUploading: (b: boolean) => void
   ) => (
     <div>
-      <label className="block text-sm font-medium text-gray-800 mb-1">{label}</label>
+      <label className={labelCls}>{label}</label>
       {url && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={url} alt={label} className="w-full h-40 object-cover rounded-lg mb-2 border border-gray-200" />
@@ -163,86 +169,98 @@ export default function AdminGalleryPage() {
   );
 
   return (
-    <div className="py-8">
-      <div className="container mx-auto px-4 max-w-5xl">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Galleri</h1>
+    <div className="p-6 md:p-8 max-w-7xl">
+      <PageHeader
+        title="Galleri"
+        subtitle="Publicera före- och efterbilder från genomförda projekt"
+      />
 
-        {message && (
-          <div className="bg-green-50 border border-green-200 text-green-800 rounded-lg p-3 mb-6">{message}</div>
-        )}
+      {message && (
+        <div className="bg-green-50 border border-green-200 text-green-800 rounded-lg p-3 mb-6 text-sm">{message}</div>
+      )}
 
-        {/* Add form */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900">Nytt projekt</h2>
+      {/* Add form */}
+      <Card className="mb-8">
+        <CardHeader title="Nytt projekt" />
+        <CardBody>
           <div className="grid md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium text-gray-800 mb-1">Titel *</label>
+              <label className={labelCls}>Titel *</label>
               <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Krypgrund villa, Vendelsö"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900" />
+                className={inputCls} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-800 mb-1">Plats</label>
+              <label className={labelCls}>Plats</label>
               <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Vendelsö"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900" />
+                className={inputCls} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-800 mb-1">Typ</label>
+              <label className={labelCls}>Typ</label>
               <input value={projectType} onChange={(e) => setProjectType(e.target.value)} placeholder="Krypgrund / Vind / Villa"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900" />
+                className={inputCls} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-800 mb-1">Yta (m²)</label>
+              <label className={labelCls}>Yta (m²)</label>
               <input type="number" value={areaSize} onChange={(e) => setAreaSize(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900" />
+                className={inputCls} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-800 mb-1">Datum</label>
+              <label className={labelCls}>Datum</label>
               <input type="date" value={completionDate} onChange={(e) => setCompletionDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900" />
+                className={inputCls} />
             </div>
           </div>
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-800 mb-1">Beskrivning</label>
+            <label className={labelCls}>Beskrivning</label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
               placeholder="Tilläggsisolering av krypgrund med sprutskum…"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900" />
+              className={inputCls} />
           </div>
           <div className="grid md:grid-cols-2 gap-4 mb-4">
             {uploadBox('Före-bild', beforeUrl, uploadingBefore, setBeforeUrl, setUploadingBefore)}
             {uploadBox('Efter-bild', afterUrl, uploadingAfter, setAfterUrl, setUploadingAfter)}
           </div>
-          <button onClick={handleSubmit} disabled={saving || uploadingBefore || uploadingAfter}
-            className="bg-green-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-green-700 transition disabled:bg-gray-400">
+          <Button onClick={handleSubmit} disabled={saving || uploadingBefore || uploadingAfter}>
             {saving ? 'Publicerar…' : 'Publicera i galleriet'}
-          </button>
-          <p className="text-sm text-gray-700 mt-2">Bilder optimeras automatiskt (storlek, ljus/kontrast, komprimering) innan de laddas upp.</p>
-        </div>
+          </Button>
+          <p className="text-sm text-gray-700 mt-3">Bilder optimeras automatiskt (storlek, ljus/kontrast, komprimering) innan de laddas upp.</p>
+        </CardBody>
+      </Card>
 
-        {/* Existing projects */}
-        <h2 className="text-xl font-semibold mb-4 text-gray-900">Publicerade projekt ({projects.length})</h2>
-        {loading ? (
-          <p className="text-gray-700">Laddar…</p>
-        ) : projects.length === 0 ? (
-          <p className="text-gray-700">Inga projekt publicerade ännu.</p>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projects.map((p) => (
-              <div key={p.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-                {(p.after_image_url || p.image_url) && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={(p.after_image_url || p.image_url) as string} alt={p.title} className="w-full h-40 object-cover" />
-                )}
-                <div className="p-4">
-                  <h3 className="font-semibold text-gray-800">{p.title}</h3>
-                  {p.location && <p className="text-sm text-gray-700">📍 {p.location}</p>}
-                  <button onClick={() => handleDelete(p.id)}
-                    className="mt-2 text-sm text-red-600 hover:text-red-700 font-medium">Ta bort</button>
-                </div>
+      {/* Existing projects */}
+      <h2 className="text-lg font-semibold mb-4 text-gray-900">Publicerade projekt ({projects.length})</h2>
+      {loading ? (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[0, 1, 2].map((i) => (
+            <Card key={i} className="overflow-hidden">
+              <Skeleton className="w-full h-40 rounded-none" />
+              <div className="p-4 flex flex-col gap-2">
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-3 w-1/3" />
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            </Card>
+          ))}
+        </div>
+      ) : projects.length === 0 ? (
+        <EmptyState title="Inga projekt publicerade ännu" description="Lägg till ett projekt ovan så visas det i det publika galleriet." />
+      ) : (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {projects.map((p) => (
+            <Card key={p.id} className="overflow-hidden">
+              {(p.after_image_url || p.image_url) && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={(p.after_image_url || p.image_url) as string} alt={p.title} className="w-full h-40 object-cover" />
+              )}
+              <div className="p-4">
+                <h3 className="font-semibold text-gray-900">{p.title}</h3>
+                {p.location && <p className="text-sm text-gray-700">{p.location}</p>}
+                <button onClick={() => handleDelete(p.id)}
+                  className="mt-3 text-sm text-red-600 hover:text-red-700 font-medium">Ta bort</button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

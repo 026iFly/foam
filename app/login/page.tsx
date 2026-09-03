@@ -43,7 +43,7 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-surface">
       <div className="max-w-md w-full mx-4">
         {/* Logo */}
         <div className="text-center mb-8">
@@ -90,7 +90,7 @@ function LoginForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-gray-900"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent outline-none transition text-gray-900"
                 placeholder="namn@exempel.se"
                 autoComplete="email"
               />
@@ -110,7 +110,7 @@ function LoginForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-gray-900"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent outline-none transition text-gray-900"
                 placeholder=""
                 autoComplete="current-password"
               />
@@ -127,7 +127,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="w-full bg-green-700 text-white py-3 rounded-lg font-semibold hover:bg-green-800 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {loading ? 'Loggar in...' : 'Logga in'}
             </button>
@@ -137,7 +137,7 @@ function LoginForm() {
           <div className="mt-6 text-center">
             <a
               href="/"
-              className="text-sm text-gray-700 hover:text-blue-600 transition"
+              className="text-sm text-gray-700 hover:text-green-700 transition"
             >
               Tillbaka till startsidan
             </a>
@@ -156,7 +156,7 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-gray-100">
+      <div className="min-h-screen flex items-center justify-center bg-surface">
         <div className="text-gray-600">Laddar...</div>
       </div>
     }>

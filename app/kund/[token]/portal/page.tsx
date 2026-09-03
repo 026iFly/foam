@@ -296,7 +296,7 @@ export default function CustomerPortalPage() {
                     className={`
                       h-10 rounded text-sm transition
                       ${!day.isCurrentMonth ? 'text-gray-300' : ''}
-                      ${isSelected ? 'bg-blue-600 text-white font-bold' : ''}
+                      ${isSelected ? 'bg-green-700 text-white font-bold' : ''}
                       ${isAvailable && !isSelected ? 'bg-green-50 text-green-800 hover:bg-green-100 font-medium' : ''}
                       ${!isAvailable && day.isCurrentMonth && !isPast ? 'text-gray-300' : ''}
                       ${isPast && day.isCurrentMonth ? 'text-gray-300' : ''}
@@ -319,7 +319,7 @@ export default function CustomerPortalPage() {
           <button
             onClick={onConfirm}
             disabled={!selectedDate || isConfirming}
-            className="flex-1 bg-blue-600 text-white rounded-lg py-3 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+            className="flex-1 bg-green-700 text-white rounded-lg py-3 text-sm font-medium hover:bg-green-800 disabled:opacity-50"
           >
             {isConfirming ? 'Vänta...' : confirmLabel}
           </button>
@@ -461,7 +461,7 @@ export default function CustomerPortalPage() {
 
   const formatStatus = (status: string) => {
     const map: Record<string, { label: string; color: string }> = {
-      scheduled: { label: 'Bokad', color: 'bg-blue-100 text-blue-800' },
+      scheduled: { label: 'Bokad', color: 'bg-green-100 text-green-800' },
       confirmed: { label: 'Bekräftad', color: 'bg-green-100 text-green-800' },
       completed: { label: 'Slutförd', color: 'bg-gray-100 text-gray-800' },
       cancelled: { label: 'Avbokad', color: 'bg-red-100 text-red-800' },
@@ -524,7 +524,7 @@ export default function CustomerPortalPage() {
 
         {/* No booking yet — prominent date selection */}
         {(noBookingYet || needsDateSelection) && !showDatePicker && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg shadow p-6">
+          <div className="bg-green-50 border border-green-200 rounded-lg shadow p-6">
             <h3 className="text-md font-semibold text-gray-900 mb-2">Välj installationsdatum</h3>
             <p className="text-sm text-gray-700 mb-4">
               {noBookingYet
@@ -533,7 +533,7 @@ export default function CustomerPortalPage() {
             </p>
             <button
               onClick={openDatePicker}
-              className="w-full bg-blue-600 text-white rounded-lg py-3 text-sm font-medium hover:bg-blue-700"
+              className="w-full bg-green-700 text-white rounded-lg py-3 text-sm font-medium hover:bg-green-800"
             >
               Välj datum
             </button>
@@ -634,7 +634,7 @@ export default function CustomerPortalPage() {
                         <div className="flex justify-between">
                           <span className="font-medium text-gray-900">{c.name}</span>
                           {rot_customer_info.customers.length > 1 && (
-                            <span className="text-blue-700">{c.share}%</span>
+                            <span className="text-green-700">{c.share}%</span>
                           )}
                         </div>
                         {quote.rot_customer_max?.[String(idx)] !== undefined && (
@@ -648,7 +648,7 @@ export default function CustomerPortalPage() {
                 </div>
                 <button
                   onClick={() => setShowRotForm(true)}
-                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  className="text-sm text-green-700 hover:text-green-800 font-medium"
                 >
                   Ändra ROT-information
                 </button>
@@ -689,7 +689,7 @@ export default function CustomerPortalPage() {
                       <div className="flex justify-between items-center mb-2">
                         <label className="block text-sm font-medium text-gray-900">Personer för ROT-avdrag *</label>
                         {rotCustomers.length < 4 && (
-                          <button type="button" onClick={addRotCustomer} className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                          <button type="button" onClick={addRotCustomer} className="text-sm text-green-700 hover:text-green-800 font-medium">
                             + Lägg till person
                           </button>
                         )}
@@ -778,7 +778,7 @@ export default function CustomerPortalPage() {
                       <button
                         onClick={handleSubmitRot}
                         disabled={submittingRot}
-                        className="flex-1 bg-blue-600 text-white rounded-lg py-3 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+                        className="flex-1 bg-green-700 text-white rounded-lg py-3 text-sm font-medium hover:bg-green-800 disabled:opacity-50"
                       >
                         {submittingRot ? 'Skickar...' : 'Spara ROT-information'}
                       </button>

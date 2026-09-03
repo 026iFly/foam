@@ -2,6 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import {
+  PageHeader,
+  StatCard,
+  Card,
+  CardHeader,
+  CardBody,
+  StatusBadge,
+  Button,
+  Skeleton,
+} from '@/app/components/ui';
 
 interface QuoteCounts {
   pending: number;
@@ -203,338 +213,299 @@ export default function AdminDashboard() {
     });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'reviewed': return 'bg-blue-100 text-blue-800';
-      case 'quoted': return 'bg-purple-100 text-purple-800';
-      case 'sent': return 'bg-indigo-100 text-indigo-800';
-      case 'accepted': return 'bg-green-100 text-green-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  // Derived presentation data (no extra fetching)
+  const todayLabel = new Date().toLocaleDateString('sv-SE', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'pending': return 'Ny';
-      case 'reviewed': return 'Granskad';
-      case 'quoted': return 'Offert skapad';
-      case 'sent': return 'Skickad';
-      case 'accepted': return 'Accepterad';
-      case 'rejected': return 'Avböjd';
-      default: return status;
-    }
-  };
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const upcoming = upcomingBookings.filter((b) => {
+    if (b.status === 'cancelled') return false;
+    const d = new Date(b.scheduled_date);
+    return !Number.isNaN(d.getTime()) && d >= startOfToday;
+  });
 
-  const getTodoPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'border-l-red-500';
-      case 'medium': return 'border-l-yellow-500';
-      case 'low': return 'border-l-gray-300';
-      default: return 'border-l-gray-300';
-    }
-  };
-
-  // Calculate projections
-  const projectedRevenue = recentQuotes.reduce((sum, q) => {
-    const value = q.total_incl_vat || q.total_excl_vat || 0;
-    let rate = 0.1; // pending
-    if (q.status === 'sent') rate = 0.5;
-    if (q.status === 'accepted') rate = 1.0;
-    return sum + (value * rate);
-  }, 0);
+  const header = (
+    <PageHeader
+      title="Översikt"
+      subtitle={<span suppressHydrationWarning>{todayLabel}</span>}
+      actions={<Button href="/admin/calendar">Ny bokning</Button>}
+    />
+  );
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-700">Laddar dashboard...</div>
+      <div className="p-6 md:p-8 max-w-7xl">
+        {header}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {[0, 1, 2, 3].map((i) => (
+            <Card key={i} className="p-5 flex flex-col gap-3">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-8 w-16" />
+            </Card>
+          ))}
+        </div>
+        <div className="grid lg:grid-cols-3 gap-5">
+          <div className="lg:col-span-2 space-y-5">
+            <Card>
+              <CardHeader title={<Skeleton className="h-5 w-24" />} />
+              <CardBody className="space-y-4">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-4 w-1/2" />
+              </CardBody>
+            </Card>
+            <Card>
+              <CardHeader title={<Skeleton className="h-5 w-56" />} />
+              <CardBody className="space-y-4">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+              </CardBody>
+            </Card>
+          </div>
+          <div className="space-y-5">
+            <Card>
+              <CardHeader title={<Skeleton className="h-5 w-40" />} />
+              <CardBody className="space-y-4">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-4/5" />
+              </CardBody>
+            </Card>
+            <Card>
+              <CardHeader title={<Skeleton className="h-5 w-32" />} />
+              <CardBody className="space-y-4">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/5" />
+              </CardBody>
+            </Card>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-800 mb-8">Dashboard</h1>
+    <div className="p-6 md:p-8 max-w-7xl">
+      {header}
 
-          {/* Statistics Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-3xl font-bold text-yellow-600">{counts?.pending || 0}</div>
-              <div className="text-sm text-gray-700">Nya förfrågningar</div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-3xl font-bold text-indigo-600">{counts?.sent || 0}</div>
-              <div className="text-sm text-gray-700">Skickade offerter</div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-3xl font-bold text-green-600">{counts?.accepted || 0}</div>
-              <div className="text-sm text-gray-700">Accepterade</div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-3xl font-bold text-gray-800">{counts?.all || 0}</div>
-              <div className="text-sm text-gray-700">Totalt</div>
-            </div>
-          </div>
+      {/* Statistics */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <StatCard label="Nya förfrågningar" value={counts?.pending || 0} accent hint="Väntar på granskning" />
+        <StatCard label="Skickade offerter" value={counts?.sent || 0} hint="Inväntar svar från kund" />
+        <StatCard label="Accepterade" value={counts?.accepted || 0} hint={`${counts?.all || 0} offerter totalt`} />
+        <StatCard label="Kommande bokningar" value={upcoming.length} hint="Hembesök och installationer" />
+      </div>
 
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Left Column - To-do list */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* To-do List */}
-              <div className="bg-white rounded-lg shadow">
-                <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-                  <h2 className="text-lg font-semibold text-gray-800">Att göra</h2>
-                  <button
-                    onClick={syncTasks}
-                    disabled={syncing}
-                    className="text-sm px-3 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50"
-                  >
-                    {syncing ? 'Synkar...' : 'Uppdatera'}
-                  </button>
-                </div>
-                <div className="divide-y divide-gray-100">
-                  {todos.length === 0 ? (
-                    <div className="p-6 text-center text-gray-700">
-                      <p>Inga uppgifter just nu.</p>
-                      <button
-                        onClick={syncTasks}
-                        className="mt-2 text-sm text-green-600 hover:text-green-700"
-                      >
-                        Skapa uppgifter från offerter
-                      </button>
-                    </div>
-                  ) : (
-                    todos.map((todo) => (
-                      <div
-                        key={todo.id}
-                        className={`flex items-center gap-3 p-4 hover:bg-gray-50 border-l-4 ${getTodoPriorityColor(todo.priority)}`}
-                      >
-                        <button
-                          onClick={(e) => completeTask(todo.id, e)}
-                          className="flex-shrink-0 w-5 h-5 border-2 border-gray-300 rounded hover:border-green-500 hover:bg-green-50 flex items-center justify-center"
-                          title="Markera som klar"
-                        >
-                          <span className="text-transparent hover:text-green-500 text-xs">✓</span>
-                        </button>
-                        <Link
-                          href={todo.quote_id ? `/admin/quotes/${todo.quote_id}` : '/admin/quotes'}
-                          className="flex-1 min-w-0"
-                        >
-                          <div className="font-medium text-gray-800">{todo.title}</div>
-                          <div className="text-sm text-gray-700 truncate">{todo.description}</div>
-                        </Link>
-                      </div>
-                    ))
-                  )}
-                </div>
-                {todos.length > 0 && (
-                  <div className="p-3 border-t border-gray-200 bg-gray-50">
-                    <Link
-                      href="/admin/quotes"
-                      className="text-sm text-green-600 hover:text-green-700 font-medium"
+      <div className="grid lg:grid-cols-3 gap-5">
+        {/* Left column */}
+        <div className="lg:col-span-2 space-y-5">
+          {/* To-do list */}
+          <Card>
+            <CardHeader
+              title="Att göra"
+              action={
+                <Button variant="secondary" size="sm" onClick={syncTasks} disabled={syncing}>
+                  {syncing ? 'Synkar...' : 'Uppdatera'}
+                </Button>
+              }
+            />
+            {todos.length === 0 ? (
+              <CardBody className="text-center">
+                <p className="text-gray-700">Inga uppgifter just nu.</p>
+                <Button variant="ghost" size="sm" onClick={syncTasks} className="mt-2">
+                  Skapa uppgifter från offerter
+                </Button>
+              </CardBody>
+            ) : (
+              <ul className="divide-y divide-gray-100">
+                {todos.map((todo) => (
+                  <li key={todo.id} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50">
+                    <button
+                      type="button"
+                      onClick={(e) => completeTask(todo.id, e)}
+                      className="group flex-shrink-0 w-5 h-5 rounded border-2 border-gray-300 hover:border-green-600 hover:bg-green-50 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+                      title="Markera som klar"
+                      aria-label="Markera som klar"
                     >
-                      Visa alla offerter →
-                    </Link>
-                  </div>
-                )}
-              </div>
-
-              {/* Recent Quotes */}
-              <div className="bg-white rounded-lg shadow">
-                <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-                  <h2 className="text-lg font-semibold text-gray-800">Senaste offertförfrågningar</h2>
-                  <Link
-                    href="/admin/quotes"
-                    className="text-sm text-green-600 hover:text-green-700"
-                  >
-                    Visa alla
-                  </Link>
-                </div>
-                <div className="divide-y divide-gray-100">
-                  {recentQuotes.length === 0 ? (
-                    <div className="p-6 text-center text-gray-700">
-                      Inga offertförfrågningar ännu.
-                    </div>
-                  ) : (
-                    recentQuotes.map((quote) => (
-                      <Link
-                        key={quote.id}
-                        href={`/admin/quotes/${quote.id}`}
-                        className="block p-4 hover:bg-gray-50"
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-transparent group-hover:text-green-700"
+                        aria-hidden="true"
                       >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <div className="font-medium text-gray-800">{quote.customer_name}</div>
-                            <div className="text-sm text-gray-700">{quote.customer_address}</div>
-                          </div>
-                          <div className="text-right">
-                            <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusColor(quote.status)}`}>
-                              {getStatusLabel(quote.status)}
-                            </span>
-                            <div className="text-sm text-gray-600 mt-1">
-                              {formatCurrency(quote.total_incl_vat || quote.total_excl_vat || 0)}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-xs text-gray-700 mt-2">
+                        <path d="M5 13l4 4L19 7" />
+                      </svg>
+                    </button>
+                    <Link
+                      href={todo.quote_id ? `/admin/quotes/${todo.quote_id}` : '/admin/quotes'}
+                      className="flex-1 min-w-0"
+                    >
+                      <div className="font-medium text-gray-900 truncate">{todo.title}</div>
+                      {todo.description && (
+                        <div className="text-sm text-gray-600 truncate">{todo.description}</div>
+                      )}
+                    </Link>
+                    <StatusBadge status={todo.priority} className="shrink-0" />
+                  </li>
+                ))}
+              </ul>
+            )}
+            {todos.length > 0 && (
+              <div className="px-5 py-3 border-t border-gray-200">
+                <Link href="/admin/quotes" className="text-sm font-medium text-green-700 hover:text-green-800">
+                  Visa alla offerter
+                </Link>
+              </div>
+            )}
+          </Card>
+
+          {/* Recent quotes */}
+          <Card>
+            <CardHeader
+              title="Senaste offertförfrågningar"
+              action={
+                <Button href="/admin/quotes" variant="ghost" size="sm">
+                  Visa alla
+                </Button>
+              }
+            />
+            {recentQuotes.length === 0 ? (
+              <CardBody className="text-center text-gray-700">Inga offertförfrågningar ännu.</CardBody>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs font-semibold uppercase tracking-wide text-gray-600 border-b border-gray-200">
+                      <th scope="col" className="px-5 py-2.5">Kund</th>
+                      <th scope="col" className="px-5 py-2.5 text-right">Belopp</th>
+                      <th scope="col" className="px-5 py-2.5">Status</th>
+                      <th scope="col" className="px-5 py-2.5 text-right">Datum</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {recentQuotes.map((quote) => (
+                      <tr key={quote.id} className="hover:bg-gray-50">
+                        <td className="px-5 py-3 min-w-0">
+                          <Link href={`/admin/quotes/${quote.id}`} className="block">
+                            <div className="font-medium text-gray-900 truncate">{quote.customer_name}</div>
+                            <div className="text-xs text-gray-600 truncate">{quote.customer_address}</div>
+                          </Link>
+                        </td>
+                        <td className="px-5 py-3 text-right text-gray-900 tabular-nums whitespace-nowrap">
+                          {formatCurrency(quote.total_incl_vat || quote.total_excl_vat || 0)}
+                        </td>
+                        <td className="px-5 py-3">
+                          <StatusBadge status={quote.status} />
+                        </td>
+                        <td className="px-5 py-3 text-right text-gray-700 whitespace-nowrap">
                           {formatDate(quote.created_at)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* Right column */}
+        <div className="space-y-5">
+          {/* Upcoming bookings */}
+          <Card>
+            <CardHeader
+              title="Kommande bokningar"
+              action={
+                <Button href="/admin/calendar" variant="ghost" size="sm">
+                  Öppna kalendern
+                </Button>
+              }
+            />
+            {upcoming.length === 0 ? (
+              <CardBody className="text-sm text-gray-700">Inga bokade besök eller installationer.</CardBody>
+            ) : (
+              <ul className="divide-y divide-gray-100">
+                {upcoming.slice(0, 5).map((booking) => (
+                  <li key={booking.id} className="flex items-center gap-3 px-5 py-3 text-sm">
+                    <span
+                      className={`w-2 h-2 rounded-full shrink-0 ${
+                        booking.booking_type === 'installation' ? 'bg-green-600' : 'bg-blue-600'
+                      }`}
+                      aria-hidden="true"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900">
+                        {booking.booking_type === 'installation' ? 'Installation' : 'Hembesök'}
+                      </div>
+                      <div className="text-gray-600 truncate">{booking.customer_name}</div>
+                    </div>
+                    <div className="text-gray-700 whitespace-nowrap">{formatDate(booking.scheduled_date)}</div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+
+          {/* Stock levels */}
+          <Card>
+            <CardHeader
+              title="Lagerprognos"
+              action={
+                <Button href="/admin/inventory" variant="ghost" size="sm">
+                  Hantera lager
+                </Button>
+              }
+            />
+            <CardBody>
+              {stockLevels.length === 0 ? (
+                <div className="text-sm text-gray-700">Lagerdata inte tillgänglig. Kör databasen migreringen.</div>
+              ) : (
+                <div className="space-y-4">
+                  {stockLevels.map((stock) => (
+                    <div key={stock.id} className="space-y-1">
+                      <div className="flex justify-between gap-3 text-sm">
+                        <span className="font-medium text-gray-900 truncate">{stock.name}</span>
+                        <span className={`tabular-nums whitespace-nowrap ${stock.is_low ? 'text-red-700 font-bold' : 'text-gray-900'}`}>
+                          {stock.current_stock} {stock.unit}
+                        </span>
+                      </div>
+                      <div className={`text-xs ${stock.low_in_7_days ? 'text-amber-700 font-medium' : 'text-gray-600'}`}>
+                        Om 7d: {stock.stock_in_7_days} {stock.unit}
+                        {stock.confirmed_7_days > 0 && ` (${stock.confirmed_7_days} ${stock.unit} bokade)`}
+                      </div>
+                      <div className={`text-xs ${stock.low_in_30_days ? 'text-amber-700 font-medium' : 'text-gray-600'}`}>
+                        Om 30d: {stock.stock_in_30_days} {stock.unit}
+                        {stock.projected_from_quotes > 0 && ` (inkl. ~${stock.projected_from_quotes} ${stock.unit} från offerter)`}
+                      </div>
+                      {stock.is_low && (
+                        <div className="text-xs text-red-700 font-medium">
+                          Under minimigräns ({stock.minimum_stock} {stock.unit})
                         </div>
-                      </Link>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column - Stock & Calendar */}
-            <div className="space-y-6">
-              {/* Quick Actions */}
-              <div className="bg-white rounded-lg shadow p-4">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">Snabbval</h2>
-                <div className="space-y-2">
-                  <Link
-                    href="/admin/quotes"
-                    className="block w-full text-left px-4 py-3 bg-green-50 text-green-700 rounded-lg hover:bg-green-100"
-                  >
-                    📋 Alla offerter
-                  </Link>
-                  <Link
-                    href="/admin/inventory"
-                    className="block w-full text-left px-4 py-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100"
-                  >
-                    📦 Lagerstatus
-                  </Link>
-                  <Link
-                    href="/admin/calendar"
-                    className="block w-full text-left px-4 py-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100"
-                  >
-                    📅 Kalender
-                  </Link>
-                  <Link
-                    href="/admin/settings"
-                    className="block w-full text-left px-4 py-3 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100"
-                  >
-                    ⚙️ Inställningar
-                  </Link>
-                </div>
-              </div>
-
-              {/* Stock Levels */}
-              <div className="bg-white rounded-lg shadow">
-                <div className="p-4 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-800">Lagerprognos</h2>
-                </div>
-                <div className="p-4">
-                  {stockLevels.length === 0 ? (
-                    <div className="text-sm text-gray-700">
-                      Lagerdata inte tillgänglig. Kör databasen migreringen.
+                      )}
                     </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {stockLevels.map((stock) => (
-                        <div key={stock.id} className="space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <span className="font-medium text-gray-700">{stock.name}</span>
-                            <span className={stock.is_low ? 'text-red-600 font-bold' : 'text-gray-900'}>
-                              {stock.current_stock} {stock.unit}
-                            </span>
-                          </div>
-                          <div className={`text-xs ${stock.low_in_7_days ? 'text-orange-600 font-medium' : 'text-gray-700'}`}>
-                            Om 7d: {stock.stock_in_7_days} {stock.unit}
-                            {stock.confirmed_7_days > 0 && ` (${stock.confirmed_7_days} ${stock.unit} bokade)`}
-                          </div>
-                          <div className={`text-xs ${stock.low_in_30_days ? 'text-orange-600 font-medium' : 'text-gray-700'}`}>
-                            Om 30d: {stock.stock_in_30_days} {stock.unit}
-                            {stock.projected_from_quotes > 0 && ` (inkl. ~${stock.projected_from_quotes} ${stock.unit} från offerter)`}
-                          </div>
-                          {stock.is_low && (
-                            <div className="text-xs text-red-600 font-medium">
-                              ⚠️ Under minimigräns ({stock.minimum_stock} {stock.unit})
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  ))}
                 </div>
-                {materialProjections && (materialProjections.closedCellKg > 0 || materialProjections.openCellKg > 0) && (
-                  <div className="px-4 pb-3 text-xs text-gray-700">
-                    Prognos: {Math.round(materialProjections.conversionRates.signed * 100)}% signerade, {Math.round(materialProjections.conversionRates.sent * 100)}% skickade, {Math.round(materialProjections.conversionRates.pending * 100)}% nya
-                  </div>
-                )}
-                <div className="p-3 border-t border-gray-200 bg-gray-50">
-                  <Link
-                    href="/admin/inventory"
-                    className="text-sm text-green-600 hover:text-green-700 font-medium"
-                  >
-                    Hantera lager →
-                  </Link>
-                </div>
+              )}
+            </CardBody>
+            {materialProjections && (materialProjections.closedCellKg > 0 || materialProjections.openCellKg > 0) && (
+              <div className="px-5 py-3 border-t border-gray-200 text-xs text-gray-600">
+                Prognos: {Math.round(materialProjections.conversionRates.signed * 100)}% signerade,{' '}
+                {Math.round(materialProjections.conversionRates.sent * 100)}% skickade,{' '}
+                {Math.round(materialProjections.conversionRates.pending * 100)}% nya
               </div>
-
-              {/* Revenue Projection */}
-              <div className="bg-white rounded-lg shadow p-4">
-                <h2 className="text-lg font-semibold text-gray-800 mb-3">Prognos</h2>
-                <div className="space-y-3">
-                  <div>
-                    <div className="text-2xl font-bold text-green-600">
-                      {formatCurrency(projectedRevenue)}
-                    </div>
-                    <div className="text-sm text-gray-700">Projicerade intäkter</div>
-                  </div>
-                  <div className="text-xs text-gray-700">
-                    Baserat på konverteringsgrader: 100% accepterade, 50% skickade, 10% nya
-                  </div>
-                </div>
-              </div>
-
-              {/* Upcoming Bookings */}
-              <div className="bg-white rounded-lg shadow">
-                <div className="p-4 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-800">Kommande</h2>
-                </div>
-                <div className="p-4">
-                  {upcomingBookings.length === 0 ? (
-                    <div className="text-sm text-gray-700">
-                      Inga bokade besök eller installationer.
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {upcomingBookings.slice(0, 5).map((booking) => (
-                        <div
-                          key={booking.id}
-                          className="flex items-center gap-3 text-sm"
-                        >
-                          <span className={`w-2 h-2 rounded-full ${
-                            booking.booking_type === 'installation' ? 'bg-green-500' : 'bg-blue-500'
-                          }`} />
-                          <div className="flex-1">
-                            <div className="font-medium text-gray-700">
-                              {booking.booking_type === 'installation' ? 'Installation' : 'Hembesök'}
-                            </div>
-                            <div className="text-gray-700">{booking.customer_name}</div>
-                          </div>
-                          <div className="text-gray-700">
-                            {formatDate(booking.scheduled_date)}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="p-3 border-t border-gray-200 bg-gray-50">
-                  <Link
-                    href="/admin/calendar"
-                    className="text-sm text-green-600 hover:text-green-700 font-medium"
-                  >
-                    Öppna kalendern →
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
+            )}
+          </Card>
         </div>
       </div>
     </div>

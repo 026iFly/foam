@@ -1,26 +1,51 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+  Intellifoam design tokens (Tailwind v4, CSS-first).
+  One brand green. We deliberately REPLACE Tailwind's green scale so every
+  existing `green-*` utility across the site adopts the refined brand colour,
+  and lift the two lightest text greys so `text-gray-500/400` stay legible on
+  white (project rule: no light grey text on light backgrounds).
+*/
+@theme {
+  --color-green-50:  #e9f3ed;
+  --color-green-100: #d3e7db;
+  --color-green-200: #a9d0b9;
+  --color-green-300: #7cb894;
+  --color-green-400: #4fa071;
+  --color-green-500: #2c8a54;
+  --color-green-600: #227a48;
+  --color-green-700: #1e6b3f;   /* primary */
+  --color-green-800: #185733;   /* primary hover */
+  --color-green-900: #12261a;   /* dark chrome: footer, admin sidebar */
+  --color-green-950: #0c1a11;
+
+  --color-surface: #f7f7f5;     /* warm off-white page background */
+
+  --color-gray-400: #6b7280;
+  --color-gray-500: #4b5563;
 }
 
+/* Fonts: Geist is loaded by next/font in app/layout.tsx as --font-geist-sans */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #ffffff;
+  color: #374151;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 {
+  color: #1f2937;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
 }

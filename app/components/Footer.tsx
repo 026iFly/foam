@@ -3,96 +3,51 @@ import { getCompanyInfo } from '@/lib/queries';
 
 export default async function Footer() {
   const company = await getCompanyInfo();
-  const currentYear = new Date().getFullYear();
-
-  // Fallback if company info is not available
-  const companyName = company?.company_name || 'Intellifoam';
-  const companyDescription = company?.description || 'Professionell sprayisolering';
+  const year = new Date().getFullYear();
+  const phone = company?.phone || '010 703 74 00';
+  const email = company?.email || 'foam@gronteknik.nu';
 
   return (
-    <footer className="bg-gray-800 text-white mt-auto">
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Company Info */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4 text-white">{companyName}</h3>
-            <p className="text-gray-300 mb-2">{companyDescription}</p>
-            {company?.phone && (
-              <p className="text-gray-300">
-                Tel: <a href={`tel:${company.phone}`} className="hover:text-green-400 transition">{company.phone}</a>
-              </p>
-            )}
-            {company?.email && (
-              <p className="text-gray-300">
-                E-post: <a href={`mailto:${company.email}`} className="hover:text-green-400 transition">{company.email}</a>
-              </p>
-            )}
-          </div>
-
-          {/* Quick Links */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4 text-white">Snabblänkar</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="/tjanster" className="text-gray-300 hover:text-green-400 transition">
-                  Våra Tjänster
-                </Link>
-              </li>
-              <li>
-                <Link href="/galleri" className="text-gray-300 hover:text-green-400 transition">
-                  Projektgalleri
-                </Link>
-              </li>
-              <li>
-                <Link href="/faq" className="text-gray-300 hover:text-green-400 transition">
-                  Vanliga Frågor
-                </Link>
-              </li>
-              <li>
-                <Link href="/kalkylator" className="text-gray-300 hover:text-green-400 transition">
-                  Priskalkylator
-                </Link>
-              </li>
-              <li>
-                <Link href="/kontakt" className="text-gray-300 hover:text-green-400 transition">
-                  Kontakta Oss
-                </Link>
-              </li>
-              <li>
-                <Link href="/admin" className="text-gray-300 hover:text-green-400 transition">
-                  Admin
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Standards & Quality */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4 text-white">Kvalitet & Standard</h3>
-            <ul className="text-gray-300 space-y-1 text-sm">
-              <li>• CE-märkta produkter</li>
-              <li>• REACH-kompatibla material</li>
-              <li>• Enligt BBR-standard</li>
-              <li>• Följer AFS-regler</li>
-            </ul>
+    <footer className="bg-green-900 text-green-100 mt-auto">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14 grid grid-cols-1 md:grid-cols-3 gap-10">
+        <div className="flex flex-col gap-3">
+          <div className="text-lg font-bold text-white">IntelliFoam</div>
+          <p className="text-sm leading-relaxed">
+            Professionell sprutisolering med slutencellsskum. Vi utgår från Gävle och kommer till dig.
+          </p>
+          <div className="text-sm flex flex-col gap-1 mt-1">
+            <a href={`tel:${phone.replace(/\s/g, '')}`} className="hover:text-white">{phone}</a>
+            <a href={`mailto:${email}`} className="hover:text-white">{email}</a>
           </div>
         </div>
 
-        <div className="border-t border-gray-700 mt-8 pt-6 text-center">
-          <p className="text-gray-400 mb-2">
-            &copy; {currentYear} {companyName}. Alla rättigheter förbehållna.
-          </p>
-          <p className="text-gray-400">
-            En del av{' '}
-            <a
-              href="https://gronteknik.nu"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-green-400 hover:text-green-300 transition font-semibold"
-            >
-              Grönteknik.nu
-            </a>
-          </p>
+        <div>
+          <div className="text-sm font-semibold uppercase tracking-wide text-white mb-4">Snabblänkar</div>
+          <ul className="flex flex-col gap-2 text-sm">
+            <li><Link href="/tjanster" className="hover:text-white">Tjänster</Link></li>
+            <li><Link href="/galleri" className="hover:text-white">Galleri</Link></li>
+            <li><Link href="/om-oss" className="hover:text-white">Om oss</Link></li>
+            <li><Link href="/faq" className="hover:text-white">Vanliga frågor</Link></li>
+            <li><Link href="/kalkylator" className="hover:text-white">Priskalkylator</Link></li>
+            <li><Link href="/kontakt" className="hover:text-white">Kontakt</Link></li>
+          </ul>
+        </div>
+
+        <div>
+          <div className="text-sm font-semibold uppercase tracking-wide text-white mb-4">Kvalitet &amp; standard</div>
+          <ul className="flex flex-col gap-2 text-sm">
+            <li>ROT-avdrag 30 % på arbetskostnaden</li>
+            <li>Godkänd för F-skatt</li>
+            <li>Följer Boverkets byggregler (BBR)</li>
+            <li>Vattenblåst skum utan ozonnedbrytande ämnen</li>
+            <li>50+ års livslängd</li>
+          </ul>
+        </div>
+      </div>
+      <div className="border-t border-green-800">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-green-200">
+          <span>© {year} {company?.company_name || 'Intelliray AB'}. Alla rättigheter förbehållna.</span>
+          <span>Drivs av <a href="https://gronteknik.nu" className="hover:text-white underline-offset-2 hover:underline" target="_blank" rel="noopener noreferrer">Grönteknik</a></span>
         </div>
       </div>
     </footer>

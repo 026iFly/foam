@@ -1,26 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import type { QuoteRequest, QuoteStatus } from '@/lib/types/quote';
-
-const STATUS_LABELS: Record<QuoteStatus, string> = {
-  pending: 'Väntar',
-  reviewed: 'Granskad',
-  quoted: 'Offerterad',
-  sent: 'Skickad',
-  accepted: 'Accepterad',
-  rejected: 'Avvisad',
-};
-
-const STATUS_COLORS: Record<QuoteStatus, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  reviewed: 'bg-blue-100 text-blue-800',
-  quoted: 'bg-purple-100 text-purple-800',
-  sent: 'bg-green-100 text-green-800',
-  accepted: 'bg-green-200 text-green-900',
-  rejected: 'bg-red-100 text-red-800',
-};
+import { PageHeader, Card, StatusBadge, Button, Skeleton, EmptyState, cn } from '@/app/components/ui';
 
 interface QuoteListResponse {
   quotes: QuoteRequest[];
@@ -29,6 +11,10 @@ interface QuoteListResponse {
   offset: number;
   counts: Record<QuoteStatus | 'all', number>;
 }
+
+const inputCls =
+  'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white ' +
+  'focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent';
 
 export default function AdminQuotesPage() {
   const [data, setData] = useState<QuoteListResponse | null>(null);
@@ -92,119 +78,92 @@ export default function AdminQuotesPage() {
     { key: 'all', label: 'Alla' },
     { key: 'pending', label: 'Väntar' },
     { key: 'reviewed', label: 'Granskad' },
-    { key: 'quoted', label: 'Offerterad' },
+    { key: 'quoted', label: 'Offererad' },
     { key: 'sent', label: 'Skickad' },
   ];
 
   return (
-    <div className="py-8">
-      <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800">Offertförfrågningar</h1>
-            <p className="text-gray-600 mt-1">Hantera inkomna offertförfrågningar</p>
-          </div>
-          <Link
-            href="/admin"
-            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
-          >
-            Tillbaka till Dashboard
-          </Link>
-        </div>
-
-        {/* Search */}
-        <div className="mb-6">
+    <div className="p-6 md:p-8 max-w-7xl">
+      <PageHeader
+        title="Offertförfrågningar"
+        subtitle="Hantera inkomna offertförfrågningar"
+        actions={
           <form onSubmit={handleSearch} className="flex gap-2">
             <input
               type="text"
               placeholder="Sök på namn eller e-post..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900"
+              className={cn(inputCls, 'w-64 h-10')}
             />
-            <button
-              type="submit"
-              className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition"
-            >
-              Sök
-            </button>
+            <Button type="submit" variant="secondary">Sök</Button>
           </form>
-        </div>
+        }
+      />
 
-        {/* Tabs */}
-        <div className="border-b border-gray-200 mb-6">
-          <nav className="flex gap-4">
-            {tabs.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`py-3 px-1 border-b-2 font-medium text-sm transition ${
-                  activeTab === tab.key
-                    ? 'border-green-600 text-green-600'
-                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
-                }`}
-              >
-                {tab.label}
-                {data?.counts && (
-                  <span className="ml-2 bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full text-xs">
-                    {data.counts[tab.key]}
-                  </span>
-                )}
-              </button>
-            ))}
-          </nav>
-        </div>
+      {/* Tabs */}
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="flex gap-4 overflow-x-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={cn(
+                'py-3 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap',
+                activeTab === tab.key
+                  ? 'border-green-700 text-green-700'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+              )}
+            >
+              {tab.label}
+              {data?.counts && (
+                <span className="ml-2 bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full text-xs">
+                  {data.counts[tab.key]}
+                </span>
+              )}
+            </button>
+          ))}
+        </nav>
+      </div>
 
-        {/* Loading */}
-        {loading && (
-          <div className="text-center py-12 text-gray-600">
-            Laddar offerter...
-          </div>
-        )}
+      {/* Loading */}
+      {loading && (
+        <Card className="p-5 flex flex-col gap-3">
+          <Skeleton className="h-5 w-1/3" />
+          <Skeleton className="h-5 w-full" />
+          <Skeleton className="h-5 w-full" />
+          <Skeleton className="h-5 w-2/3" />
+        </Card>
+      )}
 
-        {/* Empty state */}
-        {!loading && data?.quotes.length === 0 && (
-          <div className="text-center py-12 bg-white rounded-lg shadow">
-            <p className="text-gray-600">Inga offertförfrågningar hittades</p>
-          </div>
-        )}
+      {/* Empty state */}
+      {!loading && data?.quotes.length === 0 && (
+        <EmptyState title="Inga offertförfrågningar hittades" />
+      )}
 
-        {/* Quotes table */}
-        {!loading && data && data.quotes.length > 0 && (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Datum
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Kund
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Adress
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Yta
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Totalt
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Åtgärder
-                  </th>
+      {/* Quotes table */}
+      {!loading && data && data.quotes.length > 0 && (
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead>
+                <tr className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  <th className="px-5 py-3 text-left">Datum</th>
+                  <th className="px-5 py-3 text-left">Kund</th>
+                  <th className="px-5 py-3 text-left">Adress</th>
+                  <th className="px-5 py-3 text-left">Yta</th>
+                  <th className="px-5 py-3 text-left">Totalt</th>
+                  <th className="px-5 py-3 text-left">Status</th>
+                  <th className="px-5 py-3 text-right">Åtgärder</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody>
                 {data.quotes.map((quote) => (
-                  <tr key={quote.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <tr key={quote.id} className="border-t border-gray-100 hover:bg-gray-50">
+                    <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-700">
                       {formatDate(quote.created_at)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-5 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
                         {quote.customer_name}
                       </div>
@@ -212,13 +171,13 @@ export default function AdminQuotesPage() {
                         {quote.customer_email}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 max-w-xs truncate">
+                    <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-700 max-w-xs truncate">
                       {quote.customer_address}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-700">
                       {quote.total_area ? `${quote.total_area} m²` : '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-5 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {quote.adjusted_total_incl_vat
                         ? quote.adjusted_total_incl_vat.toLocaleString('sv-SE')
                         : quote.total_incl_vat
@@ -226,26 +185,18 @@ export default function AdminQuotesPage() {
                           : '-'
                       } kr
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${STATUS_COLORS[quote.status]}`}>
-                        {STATUS_LABELS[quote.status]}
-                      </span>
+                    <td className="px-5 py-4 whitespace-nowrap">
+                      <StatusBadge status={quote.status} />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-5 py-4 whitespace-nowrap text-right">
                       <div className="flex justify-end gap-2">
-                        <Link
-                          href={`/admin/quotes/${quote.id}`}
-                          className="text-green-600 hover:text-green-900"
-                        >
+                        <Button href={`/admin/quotes/${quote.id}`} variant="ghost" size="sm">
                           Visa
-                        </Link>
+                        </Button>
                         {quote.status === 'pending' && (
-                          <button
-                            onClick={() => handleMarkReviewed(quote.id)}
-                            className="text-blue-600 hover:text-blue-900"
-                          >
+                          <Button onClick={() => handleMarkReviewed(quote.id)} variant="secondary" size="sm">
                             Granskad
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </td>
@@ -254,15 +205,15 @@ export default function AdminQuotesPage() {
               </tbody>
             </table>
           </div>
-        )}
+        </Card>
+      )}
 
-        {/* Pagination info */}
-        {data && data.total > data.limit && (
-          <div className="mt-4 text-center text-sm text-gray-600">
-            Visar {data.quotes.length} av {data.total} offerter
-          </div>
-        )}
-      </div>
+      {/* Pagination info */}
+      {data && data.total > data.limit && (
+        <div className="mt-4 text-center text-sm text-gray-600">
+          Visar {data.quotes.length} av {data.total} offerter
+        </div>
+      )}
     </div>
   );
 }

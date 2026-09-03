@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { PageHeader, Card, CardHeader, CardBody, Button, Skeleton, cn } from '@/app/components/ui';
 
 interface UserProfile {
   id: string;
@@ -11,6 +12,11 @@ interface UserProfile {
   role: string;
   profile_photo_url: string | null;
 }
+
+const inputCls =
+  'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white ' +
+  'focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent';
+const labelCls = 'block text-sm font-medium text-gray-700 mb-1';
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -160,33 +166,37 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-900">Laddar...</div>
+      <div className="p-6 md:p-8 max-w-7xl">
+        <div className="max-w-2xl flex flex-col gap-4">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-36 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="container mx-auto px-4">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-800 mb-8">Min profil</h1>
+    <div className="p-6 md:p-8 max-w-7xl">
+      <div className="max-w-2xl">
+        <PageHeader title="Min profil" subtitle="Dina uppgifter, profilbild och lösenord" />
 
-          {message && (
-            <div className="mb-6 p-4 bg-green-100 text-green-700 rounded-lg">
-              {message}
-            </div>
-          )}
+        {message && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-800 rounded-lg text-sm">
+            {message}
+          </div>
+        )}
 
-          {error && (
-            <div className="mb-6 p-4 bg-red-100 text-red-700 rounded-lg">
-              {error}
-            </div>
-          )}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
 
-          {/* Profile Photo */}
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900">Profilbild</h2>
+        {/* Profile Photo */}
+        <Card className="mb-6">
+          <CardHeader title="Profilbild" />
+          <CardBody>
             <div className="flex items-center gap-6">
               {profile?.profile_photo_url ? (
                 <img
@@ -195,13 +205,13 @@ export default function ProfilePage() {
                   className="w-24 h-24 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-24 h-24 rounded-full bg-gray-300 flex items-center justify-center">
-                  <span className="text-3xl text-gray-600">
+                <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center">
+                  <span className="text-3xl font-semibold text-green-800">
                     {firstName?.[0] || userEmail?.[0]?.toUpperCase()}
                   </span>
                 </div>
               )}
-              <div className="space-y-2">
+              <div className="flex flex-col items-start gap-2">
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -209,38 +219,32 @@ export default function ProfilePage() {
                   accept="image/*"
                   className="hidden"
                 />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-                >
+                <Button onClick={() => fileInputRef.current?.click()} variant="secondary">
                   Ladda upp bild
-                </button>
+                </Button>
                 {profile?.profile_photo_url && (
-                  <button
-                    onClick={handleRemovePhoto}
-                    className="block text-red-600 hover:text-red-700"
-                  >
+                  <Button onClick={handleRemovePhoto} variant="ghost" size="sm" className="text-red-600 hover:bg-red-50">
                     Ta bort bild
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
-          </div>
+          </CardBody>
+        </Card>
 
-          {/* Profile Form */}
-          <form onSubmit={handleSaveProfile}>
-            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <h2 className="text-xl font-semibold mb-4 text-gray-900">Personuppgifter</h2>
+        {/* Profile Form */}
+        <form onSubmit={handleSaveProfile} className="flex flex-col gap-6">
+          <Card>
+            <CardHeader title="Personuppgifter" />
+            <CardBody>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    E-post
-                  </label>
+                  <label className={labelCls}>E-post</label>
                   <input
                     type="email"
                     value={userEmail}
                     disabled
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700"
+                    className={cn(inputCls, 'bg-gray-100 text-gray-700')}
                   />
                   <p className="text-sm text-gray-700 mt-1">
                     E-postadressen kan inte ändras
@@ -249,92 +253,78 @@ export default function ProfilePage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Förnamn
-                    </label>
+                    <label className={labelCls}>Förnamn</label>
                     <input
                       type="text"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                      className={inputCls}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Efternamn
-                    </label>
+                    <label className={labelCls}>Efternamn</label>
                     <input
                       type="text"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                      className={inputCls}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Telefon
-                  </label>
+                  <label className={labelCls}>Telefon</label>
                   <input
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                    className={inputCls}
                   />
                 </div>
               </div>
-            </div>
+            </CardBody>
+          </Card>
 
-            {/* Password Change */}
-            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <h2 className="text-xl font-semibold mb-4 text-gray-900">Ändra lösenord</h2>
+          {/* Password Change */}
+          <Card>
+            <CardHeader title="Ändra lösenord" />
+            <CardBody>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nuvarande lösenord
-                  </label>
+                  <label className={labelCls}>Nuvarande lösenord</label>
                   <input
                     type="password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                    className={inputCls}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nytt lösenord
-                  </label>
+                  <label className={labelCls}>Nytt lösenord</label>
                   <input
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                    className={inputCls}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Bekräfta nytt lösenord
-                  </label>
+                  <label className={labelCls}>Bekräfta nytt lösenord</label>
                   <input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                    className={inputCls}
                   />
                 </div>
               </div>
-            </div>
+            </CardBody>
+          </Card>
 
-            <button
-              type="submit"
-              disabled={saving}
-              className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:bg-gray-400"
-            >
-              {saving ? 'Sparar...' : 'Spara ändringar'}
-            </button>
-          </form>
-        </div>
+          <Button type="submit" disabled={saving} size="lg" className="w-full">
+            {saving ? 'Sparar...' : 'Spara ändringar'}
+          </Button>
+        </form>
       </div>
     </div>
   );

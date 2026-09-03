@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Skeleton, cn } from '@/app/components/ui';
 
 interface AvailabilityInfo {
   installerId: string;
@@ -75,7 +76,13 @@ export default function InstallerPicker({
   }
 
   if (loading) {
-    return <p className="text-sm text-gray-600">Hämtar tillgänglighet...</p>;
+    return (
+      <div className="space-y-2">
+        <Skeleton className="h-3 w-40" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    );
   }
 
   const available = installers.filter((i) => i.available);
@@ -97,33 +104,36 @@ export default function InstallerPicker({
           <div
             key={inst.installerId}
             onClick={() => toggleInstaller(inst.installerId)}
-            className={`flex items-center justify-between rounded px-3 py-2 cursor-pointer border ${
+            className={cn(
+              'flex cursor-pointer items-center justify-between rounded-lg border px-3 py-2 transition-colors',
               isSelected
-                ? 'border-blue-500 bg-blue-50'
+                ? 'border-green-600 bg-green-50'
                 : 'border-gray-200 hover:border-gray-300'
-            }`}
+            )}
           >
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
                 checked={isSelected}
                 readOnly
-                className="rounded"
+                className="rounded accent-green-700"
               />
               <span className="text-sm font-medium text-gray-900">{inst.installerName}</span>
               <span className="text-xs text-gray-600">#{inst.priorityOrder}</span>
             </div>
             {isSelected && (
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setLead(inst.installerId);
                 }}
-                className={`text-xs px-2 py-0.5 rounded ${
+                className={cn(
+                  'h-6 rounded-full px-2.5 text-xs font-semibold transition-colors',
                   isLead
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-gray-100 text-gray-700 hover:bg-yellow-50'
-                }`}
+                    ? 'bg-amber-50 text-amber-800'
+                    : 'bg-gray-100 text-gray-700 hover:bg-amber-50'
+                )}
               >
                 {isLead ? 'Ansvarig' : 'Gör ansvarig'}
               </button>
@@ -134,15 +144,15 @@ export default function InstallerPicker({
 
       {/* Unavailable installers */}
       {unavailable.length > 0 && (
-        <div className="mt-2 pt-2 border-t border-gray-200">
-          <p className="text-xs text-gray-600 mb-1">Ej tillgängliga:</p>
+        <div className="mt-2 border-t border-gray-200 pt-2">
+          <p className="mb-1 text-xs text-gray-600">Ej tillgängliga:</p>
           {unavailable.map((inst) => (
             <div
               key={inst.installerId}
-              className="flex items-center justify-between rounded px-3 py-1.5 opacity-50"
+              className="flex items-center justify-between rounded-lg px-3 py-1.5"
             >
               <span className="text-sm text-gray-700">{inst.installerName}</span>
-              <span className="text-xs text-red-600">{inst.reason}</span>
+              <span className="text-xs text-red-700">{inst.reason}</span>
             </div>
           ))}
         </div>

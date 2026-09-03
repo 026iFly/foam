@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Card, Button, Skeleton } from '@/app/components/ui';
 
 interface MaterialEntry {
   id: number;
@@ -93,32 +94,38 @@ export default function ConfirmInstallationModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <Card className="max-h-[90vh] w-full max-w-md overflow-y-auto shadow-xl">
+        <div className="border-b border-gray-200 px-5 py-4">
+          <h2 className="text-lg font-semibold text-gray-900">
             Bekräfta installation
           </h2>
           {customerName && (
-            <p className="text-sm text-gray-500 mb-4">{customerName}</p>
+            <p className="mt-0.5 text-sm text-gray-600">{customerName}</p>
           )}
+        </div>
 
+        <div className="p-5">
           {loading ? (
-            <div className="py-8 text-center text-gray-500">Laddar material...</div>
+            <div className="space-y-3">
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+            </div>
           ) : materials.length === 0 ? (
-            <div className="py-4 text-sm text-gray-500">
+            <div className="text-sm text-gray-700">
               Inga material kopplade till denna bokning. Installationen kommer att markeras som slutförd.
             </div>
           ) : (
             <div className="space-y-3">
-              <p className="text-sm text-gray-600 mb-3">
+              <p className="text-sm text-gray-700">
                 Ange faktisk materialåtgång (kg):
               </p>
               {materials.map((m) => (
                 <div key={m.id} className="flex items-center gap-3">
-                  <label className="flex-1 text-sm text-gray-700">{m.name}</label>
-                  <div className="text-xs text-gray-400 w-16 text-right">
-                    Est: {m.estimated_quantity?.toFixed(1) ?? '—'}
+                  <label className="flex-1 text-sm font-medium text-gray-900">{m.name}</label>
+                  <div className="w-16 text-right text-xs text-gray-600">
+                    Est: {m.estimated_quantity?.toFixed(1) ?? '-'}
                   </div>
                   <input
                     type="number"
@@ -131,7 +138,7 @@ export default function ConfirmInstallationModal({
                         [m.id]: parseFloat(e.target.value) || 0,
                       }))
                     }
-                    className="w-24 border border-gray-300 rounded px-2 py-1.5 text-sm text-right focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    className="w-24 rounded-lg border border-gray-300 px-2 py-1.5 text-right text-sm text-gray-900 focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-600/20"
                   />
                 </div>
               ))}
@@ -139,29 +146,21 @@ export default function ConfirmInstallationModal({
           )}
 
           {error && (
-            <div className="mt-4 p-3 bg-red-50 text-red-700 text-sm rounded">
+            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
               {error}
             </div>
           )}
-
-          <div className="flex gap-3 mt-6">
-            <button
-              onClick={onClose}
-              disabled={confirming}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition text-sm font-medium"
-            >
-              Avbryt
-            </button>
-            <button
-              onClick={handleConfirm}
-              disabled={confirming || loading}
-              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-medium disabled:opacity-50"
-            >
-              {confirming ? 'Bekräftar...' : 'Bekräfta'}
-            </button>
-          </div>
         </div>
-      </div>
+
+        <div className="flex gap-3 rounded-b-lg border-t border-gray-200 bg-gray-50 px-5 py-4">
+          <Button variant="secondary" className="flex-1" onClick={onClose} disabled={confirming}>
+            Avbryt
+          </Button>
+          <Button className="flex-1" onClick={handleConfirm} disabled={confirming || loading}>
+            {confirming ? 'Bekräftar...' : 'Bekräfta'}
+          </Button>
+        </div>
+      </Card>
     </div>
   );
 }

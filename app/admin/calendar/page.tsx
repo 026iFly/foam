@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import ConfirmInstallationModal from '@/app/admin/components/ConfirmInstallationModal';
 import InstallerPicker from '@/app/admin/components/InstallerPicker';
+import { PageHeader, Card, CardHeader, CardBody, Badge, StatusBadge, Button, Skeleton, cn } from '@/app/components/ui';
 
 interface BookingInstaller {
   installer_id: string;
@@ -313,10 +314,10 @@ export default function CalendarPage() {
   };
 
   const getBookingColor = (booking: Booking) => {
-    if (booking.status === 'cancelled') return 'bg-gray-100 border-gray-300 text-gray-500';
+    if (booking.status === 'cancelled') return 'bg-gray-100 border-gray-300 text-gray-600';
     if (booking.status === 'completed') return 'bg-green-100 border-green-300 text-green-800';
-    if (booking.booking_type === 'installation') return 'bg-green-50 border-green-500 text-green-800';
-    return 'bg-blue-50 border-blue-500 text-blue-800';
+    if (booking.booking_type === 'installation') return 'bg-green-50 border-green-600 text-green-800';
+    return 'bg-amber-50 border-amber-500 text-amber-900';
   };
 
   // Group bookings by date
@@ -335,429 +336,400 @@ export default function CalendarPage() {
   const upcomingDates = sortedDates.filter(d => d >= today);
   const pastDates = sortedDates.filter(d => d < today).slice(-5).reverse();
 
+  const inputCls =
+    'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-600/20';
+
+  const renderBookingCard = (booking: Booking, compact = false) => (
+    <div key={booking.id} className={`rounded-lg border border-l-4 p-3 ${getBookingColor(booking)}`}>
+      <Link
+        href={booking.quote_id ? `/admin/quotes/${booking.quote_id}` : '#'}
+        className="block"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="font-medium">
+              {booking.booking_type === 'installation' ? 'Installation' : 'Hembesök'}
+            </div>
+            {booking.customer_name && (
+              <div className="text-sm opacity-80">{booking.customer_name}</div>
+            )}
+            {!compact && booking.customer_address && (
+              <div className="text-sm opacity-80">{booking.customer_address}</div>
+            )}
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-1 text-sm">
+            {booking.scheduled_time && <div>{booking.scheduled_time}</div>}
+            {!compact && <StatusBadge status={booking.status} />}
+          </div>
+        </div>
+        {!compact && booking.installers && booking.installers.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {booking.installers.map((inst) => (
+              <Badge
+                key={inst.installer_id}
+                variant={
+                  inst.status === 'accepted' ? 'success'
+                    : inst.status === 'declined' ? 'danger'
+                    : 'warning'
+                }
+              >
+                {inst.first_name || inst.last_name
+                  ? `${inst.first_name || ''} ${inst.last_name ? inst.last_name.charAt(0) + '.' : ''}`.trim()
+                  : 'Installatör'}
+                {inst.is_lead && ' *'}
+              </Badge>
+            ))}
+          </div>
+        )}
+        {!compact && booking.notes && (
+          <div className="mt-2 text-sm opacity-80">{booking.notes}</div>
+        )}
+      </Link>
+      {booking.booking_type === 'installation' &&
+        booking.status !== 'completed' &&
+        booking.status !== 'cancelled' && (
+        <Button size="sm" className="mt-2" onClick={() => setConfirmBookingId(booking.id)}>
+          Bekräfta installation
+        </Button>
+      )}
+    </div>
+  );
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-700">Laddar kalender...</div>
+      <div className="p-6 md:p-8 max-w-7xl">
+        <PageHeader title="Kalender" subtitle="Hembesök och installationer" />
+        <Card className="mb-6">
+          <CardBody className="flex gap-4 py-3">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-24" />
+          </CardBody>
+        </Card>
+        <Card>
+          <CardHeader title={<Skeleton className="h-5 w-28" />} />
+          <CardBody className="space-y-4">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-2/3" />
+          </CardBody>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800">Kalender</h1>
-            <div className="flex gap-2">
+    <div className="p-6 md:p-8 max-w-7xl">
+      <PageHeader
+        title="Kalender"
+        subtitle="Hembesök och installationer"
+        actions={
+          <>
+            <div className="inline-flex rounded-lg border border-gray-300 bg-white p-0.5">
               <button
-                onClick={() => openBookingModal()}
-                className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Ny bokning
-              </button>
-              <button
+                type="button"
                 onClick={() => setView('list')}
-                className={`px-4 py-2 rounded ${
-                  view === 'list' ? 'bg-gray-700 text-white' : 'bg-white text-gray-700 border'
-                }`}
+                className={cn(
+                  'h-9 rounded-md px-3 text-sm font-semibold transition-colors',
+                  view === 'list' ? 'bg-green-700 text-white' : 'text-gray-700 hover:bg-gray-50'
+                )}
               >
                 Lista
               </button>
               <button
+                type="button"
                 onClick={() => setView('month')}
-                className={`px-4 py-2 rounded ${
-                  view === 'month' ? 'bg-gray-700 text-white' : 'bg-white text-gray-700 border'
-                }`}
+                className={cn(
+                  'h-9 rounded-md px-3 text-sm font-semibold transition-colors',
+                  view === 'month' ? 'bg-green-700 text-white' : 'text-gray-700 hover:bg-gray-50'
+                )}
               >
                 Månad
               </button>
             </div>
+            <Button onClick={() => openBookingModal()}>Ny bokning</Button>
+          </>
+        }
+      />
+
+      {/* Legend */}
+      <Card className="mb-6">
+        <CardBody className="flex flex-wrap gap-x-6 gap-y-2 py-3 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="h-3.5 w-3.5 rounded border-2 border-amber-500 bg-amber-50"></span>
+            <span className="text-gray-700">Hembesök</span>
           </div>
-
-          {/* Legend */}
-          <div className="bg-white rounded-lg shadow p-4 mb-6">
-            <div className="flex flex-wrap gap-4 text-sm">
-              <div className="flex items-center gap-2">
-                <span className="w-4 h-4 bg-blue-50 border-2 border-blue-500 rounded"></span>
-                <span className="text-gray-700">Hembesök</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-4 h-4 bg-green-50 border-2 border-green-500 rounded"></span>
-                <span className="text-gray-700">Installation</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-4 h-4 bg-green-100 border-2 border-green-300 rounded"></span>
-                <span className="text-gray-700">Slutförd</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-4 h-4 bg-gray-100 border-2 border-gray-300 rounded"></span>
-                <span className="text-gray-700">Avbokad</span>
-              </div>
-            </div>
+          <div className="flex items-center gap-2">
+            <span className="h-3.5 w-3.5 rounded border-2 border-green-600 bg-green-50"></span>
+            <span className="text-gray-700">Installation</span>
           </div>
+          <div className="flex items-center gap-2">
+            <span className="h-3.5 w-3.5 rounded border-2 border-green-300 bg-green-100"></span>
+            <span className="text-gray-700">Slutförd</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="h-3.5 w-3.5 rounded border-2 border-gray-300 bg-gray-100"></span>
+            <span className="text-gray-700">Avbokad</span>
+          </div>
+        </CardBody>
+      </Card>
 
-          {/* Installer Filter */}
-          {allInstallers.length > 0 && (
-            <div className="bg-white rounded-lg shadow p-4 mb-6">
-              <div className="text-sm font-medium text-gray-700 mb-2">Visa blockerade dagar för:</div>
-              <div className="flex flex-wrap gap-2">
-                {allInstallers.map(inst => {
-                  const isActive = filterInstallerIds.includes(inst.id);
-                  const colorClass = isActive ? getInstallerColor(inst.id) : 'bg-gray-100 text-gray-700';
-                  return (
-                    <button
-                      key={inst.id}
-                      onClick={() => toggleInstallerFilter(inst.id)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium transition ${colorClass} ${isActive ? 'ring-2 ring-offset-1 ring-gray-400' : 'hover:bg-gray-200'}`}
-                    >
-                      {inst.first_name} {inst.last_name}
-                    </button>
-                  );
-                })}
-              </div>
+      {/* Installer Filter */}
+      {allInstallers.length > 0 && (
+        <Card className="mb-6">
+          <CardBody className="py-4">
+            <div className="mb-2 text-sm font-medium text-gray-700">Visa blockerade dagar för:</div>
+            <div className="flex flex-wrap gap-2">
+              {allInstallers.map(inst => {
+                const isActive = filterInstallerIds.includes(inst.id);
+                const colorClass = isActive ? getInstallerColor(inst.id) : 'bg-gray-100 text-gray-700';
+                return (
+                  <button
+                    key={inst.id}
+                    type="button"
+                    onClick={() => toggleInstallerFilter(inst.id)}
+                    className={`h-7 rounded-full px-3 text-xs font-semibold transition-colors ${colorClass} ${isActive ? 'ring-2 ring-gray-400 ring-offset-1' : 'hover:bg-gray-200'}`}
+                  >
+                    {inst.first_name} {inst.last_name}
+                  </button>
+                );
+              })}
             </div>
-          )}
+          </CardBody>
+        </Card>
+      )}
 
-          {view === 'list' ? (
-            <>
-              {/* Upcoming */}
-              <div className="bg-white rounded-lg shadow mb-6">
-                <div className="p-4 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-800">Kommande</h2>
+      {view === 'list' ? (
+        <>
+          {/* Upcoming */}
+          <Card className="mb-6">
+            <CardHeader title="Kommande" />
+            <div className="divide-y divide-gray-100">
+              {upcomingDates.length === 0 ? (
+                <div className="p-6 text-center text-gray-700">
+                  Inga bokade besök eller installationer.
                 </div>
-                <div className="divide-y divide-gray-100">
-                  {upcomingDates.length === 0 ? (
-                    <div className="p-6 text-center text-gray-700">
-                      Inga bokade besök eller installationer.
+              ) : (
+                upcomingDates.map((date) => (
+                  <div key={date} className="p-5">
+                    <div className="mb-3 text-sm font-semibold capitalize text-gray-900">
+                      {formatDate(date)}
                     </div>
-                  ) : (
-                    upcomingDates.map((date) => (
-                      <div key={date} className="p-4">
-                        <div className="font-medium text-gray-700 mb-3 capitalize">
-                          {formatDate(date)}
-                        </div>
-                        <div className="space-y-2">
-                          {bookingsByDate[date].map((booking) => (
-                            <div key={booking.id} className={`p-3 rounded border-l-4 ${getBookingColor(booking)}`}>
-                              <Link
-                                href={booking.quote_id ? `/admin/quotes/${booking.quote_id}` : '#'}
-                                className="block"
-                              >
-                                <div className="flex justify-between items-start">
-                                  <div>
-                                    <div className="font-medium">
-                                      {booking.booking_type === 'installation' ? 'Installation' : 'Hembesök'}
-                                    </div>
-                                    {booking.customer_name && (
-                                      <div className="text-sm opacity-75">{booking.customer_name}</div>
-                                    )}
-                                    {booking.customer_address && (
-                                      <div className="text-sm opacity-75">{booking.customer_address}</div>
-                                    )}
-                                  </div>
-                                  <div className="text-right text-sm">
-                                    {booking.scheduled_time && (
-                                      <div>{booking.scheduled_time}</div>
-                                    )}
-                                    <div className="capitalize opacity-75">{booking.status}</div>
-                                  </div>
-                                </div>
-                                {booking.installers && booking.installers.length > 0 && (
-                                  <div className="text-xs mt-1 flex flex-wrap gap-1">
-                                    {booking.installers.map((inst) => (
-                                      <span
-                                        key={inst.installer_id}
-                                        className={`px-1.5 py-0.5 rounded ${
-                                          inst.status === 'accepted' ? 'bg-green-100 text-green-700'
-                                            : inst.status === 'declined' ? 'bg-red-100 text-red-700'
-                                            : 'bg-yellow-100 text-yellow-700'
-                                        }`}
-                                      >
-                                        {inst.first_name || inst.last_name
-                                          ? `${inst.first_name || ''} ${inst.last_name ? inst.last_name.charAt(0) + '.' : ''}`.trim()
-                                          : 'Installatör'}
-                                        {inst.is_lead && ' *'}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                                {booking.notes && (
-                                  <div className="text-sm opacity-75 mt-2">{booking.notes}</div>
-                                )}
-                              </Link>
-                              {booking.booking_type === 'installation' &&
-                                booking.status !== 'completed' &&
-                                booking.status !== 'cancelled' && (
-                                <button
-                                  onClick={() => setConfirmBookingId(booking.id)}
-                                  className="mt-2 px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition"
-                                >
-                                  Bekräfta installation
-                                </button>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Past (last 5) */}
-              {pastDates.length > 0 && (
-                <div className="bg-white rounded-lg shadow">
-                  <div className="p-4 border-b border-gray-200">
-                    <h2 className="text-lg font-semibold text-gray-500">Tidigare</h2>
-                  </div>
-                  <div className="divide-y divide-gray-100 opacity-60">
-                    {pastDates.map((date) => (
-                      <div key={date} className="p-4">
-                        <div className="font-medium text-gray-500 mb-2 capitalize">
-                          {formatDate(date)}
-                        </div>
-                        <div className="space-y-2">
-                          {bookingsByDate[date].map((booking) => (
-                            <div
-                              key={booking.id}
-                              className="p-2 rounded bg-gray-50 text-sm text-gray-600"
-                            >
-                              {booking.booking_type === 'installation' ? 'Installation' : 'Hembesök'}
-                              {booking.customer_name && ` - ${booking.customer_name}`}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
-          ) : (
-            /* Month View */
-            <div className="bg-white rounded-lg shadow">
-              {/* Month Navigation */}
-              <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-                <button
-                  onClick={() => navigateMonth('prev')}
-                  className="p-2 hover:bg-gray-100 rounded"
-                >
-                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <h2 className="text-lg font-semibold text-gray-800">
-                  {currentMonth.toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' })}
-                </h2>
-                <button
-                  onClick={() => navigateMonth('next')}
-                  className="p-2 hover:bg-gray-100 rounded"
-                >
-                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Material Warning */}
-              {hasLowStock && (
-                <div className="mx-4 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
-                  <span className="text-red-600">!</span>
-                  <span className="text-sm text-red-800">
-                    Vissa material har låga lagernivåer. <Link href="/admin/inventory" className="underline font-medium">Se lager</Link>
-                  </span>
-                </div>
-              )}
-
-              {/* Calendar Grid */}
-              <div className="p-4">
-                {/* Weekday Headers */}
-                <div className="grid grid-cols-7 gap-1 mb-2">
-                  {['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'].map(day => (
-                    <div key={day} className="text-center text-sm font-medium text-gray-700 py-2">
-                      {day}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Calendar Days */}
-                <div className="space-y-1">
-                  {calendarData.map((week, weekIndex) => (
-                    <div key={weekIndex} className="grid grid-cols-7 gap-1">
-                      {week.map((day, dayIndex) => {
-                        const dayBookings = day.dateStr ? getBookingsForDate(day.dateStr) : [];
-                        const dayBlocked = day.dateStr ? getBlockedForDate(day.dateStr) : [];
-                        const isToday = day.dateStr === new Date().toISOString().split('T')[0];
-                        const hasVisit = dayBookings.some(b => b.booking_type === 'visit' && b.status !== 'cancelled');
-                        const hasInstallation = dayBookings.some(b => b.booking_type === 'installation' && b.status !== 'cancelled');
-                        const isSelected = selectedDate === day.dateStr;
-
-                        return (
-                          <button
-                            key={dayIndex}
-                            onClick={() => day.dateStr && setSelectedDate(isSelected ? null : day.dateStr)}
-                            className={`
-                              min-h-[80px] p-2 rounded-lg border text-left transition
-                              ${day.isCurrentMonth ? 'bg-white' : 'bg-gray-50'}
-                              ${isToday ? 'border-green-500 border-2' : 'border-gray-200'}
-                              ${isSelected ? 'ring-2 ring-green-500' : ''}
-                              ${dayBlocked.length > 0 ? 'bg-red-50' : ''}
-                              hover:border-gray-400
-                            `}
-                          >
-                            <div className={`text-sm font-medium ${day.isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}`}>
-                              {day.date?.getDate()}
-                            </div>
-                            {/* Blocked Date Indicators */}
-                            {dayBlocked.length > 0 && (
-                              <div className="mt-1 flex flex-wrap gap-0.5">
-                                {dayBlocked.map((bd, i) => (
-                                  <span
-                                    key={i}
-                                    className={`text-[10px] px-1 rounded ${getInstallerColor(bd.installer_id)}`}
-                                    title={`${getInstallerName(bd.installer_id)}: ${bd.reason || 'Blockerad'} (${bd.slot === 'full' ? 'Heldag' : bd.slot === 'morning' ? 'FM' : 'EM'})`}
-                                  >
-                                    {getInstallerName(bd.installer_id)}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                            {/* Booking Dots */}
-                            {dayBookings.length > 0 && (
-                              <div className="mt-1 flex flex-wrap gap-1">
-                                {hasVisit && (
-                                  <span className="w-2 h-2 rounded-full bg-blue-500" title="Hembesök" />
-                                )}
-                                {hasInstallation && (
-                                  <span className="w-2 h-2 rounded-full bg-green-500" title="Installation" />
-                                )}
-                                {dayBookings.length > 2 && (
-                                  <span className="text-xs text-gray-600">+{dayBookings.length - 2}</span>
-                                )}
-                              </div>
-                            )}
-                            {/* Booking Preview */}
-                            {dayBookings.slice(0, 2).map(booking => (
-                              <div
-                                key={booking.id}
-                                className={`mt-1 text-xs truncate rounded px-1 ${
-                                  booking.booking_type === 'installation'
-                                    ? 'bg-green-100 text-green-800'
-                                    : 'bg-blue-100 text-blue-800'
-                                }`}
-                              >
-                                {booking.scheduled_time?.slice(0, 5)} {booking.customer_name?.split(' ')[0] || (booking.booking_type === 'installation' ? 'Inst.' : 'Besök')}
-                              </div>
-                            ))}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Selected Date Details */}
-              {selectedDate && (
-                <div className="border-t border-gray-200 p-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <h3 className="font-semibold text-gray-800">
-                      {new Date(selectedDate).toLocaleDateString('sv-SE', {
-                        weekday: 'long',
-                        day: 'numeric',
-                        month: 'long',
-                      })}
-                    </h3>
-                    <button
-                      onClick={() => setSelectedDate(null)}
-                      className="text-gray-400 hover:text-gray-600"
-                    >
-                      Stäng
-                    </button>
-                  </div>
-                  {getBookingsForDate(selectedDate).length === 0 ? (
-                    <p className="text-gray-700 text-sm">Inga bokningar denna dag.</p>
-                  ) : (
                     <div className="space-y-2">
-                      {getBookingsForDate(selectedDate).map(booking => (
-                        <div key={booking.id} className={`p-3 rounded border-l-4 ${getBookingColor(booking)}`}>
-                          <Link
-                            href={booking.quote_id ? `/admin/quotes/${booking.quote_id}` : '#'}
-                            className="block"
-                          >
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <div className="font-medium">
-                                  {booking.booking_type === 'installation' ? 'Installation' : 'Hembesök'}
-                                </div>
-                                {booking.customer_name && (
-                                  <div className="text-sm opacity-75">{booking.customer_name}</div>
-                                )}
-                              </div>
-                              <div className="text-sm">
-                                {booking.scheduled_time}
-                              </div>
-                            </div>
-                          </Link>
-                          {booking.booking_type === 'installation' &&
-                            booking.status !== 'completed' &&
-                            booking.status !== 'cancelled' && (
-                            <button
-                              onClick={() => setConfirmBookingId(booking.id)}
-                              className="mt-2 px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition"
-                            >
-                              Bekräfta installation
-                            </button>
-                          )}
+                      {bookingsByDate[date].map((booking) => renderBookingCard(booking))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
+
+          {/* Past (last 5) */}
+          {pastDates.length > 0 && (
+            <Card className="mb-6">
+              <CardHeader title="Tidigare" />
+              <div className="divide-y divide-gray-100">
+                {pastDates.map((date) => (
+                  <div key={date} className="p-5">
+                    <div className="mb-2 text-sm font-medium capitalize text-gray-600">
+                      {formatDate(date)}
+                    </div>
+                    <div className="space-y-2">
+                      {bookingsByDate[date].map((booking) => (
+                        <div
+                          key={booking.id}
+                          className="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700"
+                        >
+                          {booking.booking_type === 'installation' ? 'Installation' : 'Hembesök'}
+                          {booking.customer_name && ` - ${booking.customer_name}`}
                         </div>
                       ))}
                     </div>
-                  )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+        </>
+      ) : (
+        /* Month View */
+        <Card className="mb-6">
+          {/* Month Navigation */}
+          <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+            <Button variant="secondary" size="sm" className="w-9 px-0" onClick={() => navigateMonth('prev')} title="Föregående månad">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </Button>
+            <h2 className="text-base font-semibold capitalize text-gray-900">
+              {currentMonth.toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' })}
+            </h2>
+            <Button variant="secondary" size="sm" className="w-9 px-0" onClick={() => navigateMonth('next')} title="Nästa månad">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Button>
+          </div>
+
+          {/* Material Warning */}
+          {hasLowStock && (
+            <div className="mx-5 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+              Vissa material har låga lagernivåer. <Link href="/admin/inventory" className="font-medium underline">Se lager</Link>
+            </div>
+          )}
+
+          {/* Calendar Grid */}
+          <CardBody>
+            {/* Weekday Headers */}
+            <div className="mb-2 grid grid-cols-7 gap-1">
+              {['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'].map(day => (
+                <div key={day} className="py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* Calendar Days */}
+            <div className="space-y-1">
+              {calendarData.map((week, weekIndex) => (
+                <div key={weekIndex} className="grid grid-cols-7 gap-1">
+                  {week.map((day, dayIndex) => {
+                    const dayBookings = day.dateStr ? getBookingsForDate(day.dateStr) : [];
+                    const dayBlocked = day.dateStr ? getBlockedForDate(day.dateStr) : [];
+                    const isToday = day.dateStr === new Date().toISOString().split('T')[0];
+                    const hasVisit = dayBookings.some(b => b.booking_type === 'visit' && b.status !== 'cancelled');
+                    const hasInstallation = dayBookings.some(b => b.booking_type === 'installation' && b.status !== 'cancelled');
+                    const isSelected = selectedDate === day.dateStr;
+
+                    return (
+                      <button
+                        key={dayIndex}
+                        type="button"
+                        onClick={() => day.dateStr && setSelectedDate(isSelected ? null : day.dateStr)}
+                        className={cn(
+                          'min-h-[80px] rounded-lg border p-2 text-left transition-colors hover:border-gray-400',
+                          day.isCurrentMonth ? 'bg-white' : 'bg-gray-50',
+                          isToday ? 'border-2 border-green-600' : 'border-gray-200',
+                          isSelected && 'ring-2 ring-green-600',
+                          dayBlocked.length > 0 && 'bg-red-50'
+                        )}
+                      >
+                        <div className={cn('text-sm', day.isCurrentMonth ? 'font-medium text-gray-900' : 'text-gray-600')}>
+                          {day.date?.getDate()}
+                        </div>
+                        {/* Blocked Date Indicators */}
+                        {dayBlocked.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-0.5">
+                            {dayBlocked.map((bd, i) => (
+                              <span
+                                key={i}
+                                className={`rounded px-1 text-[10px] ${getInstallerColor(bd.installer_id)}`}
+                                title={`${getInstallerName(bd.installer_id)}: ${bd.reason || 'Blockerad'} (${bd.slot === 'full' ? 'Heldag' : bd.slot === 'morning' ? 'FM' : 'EM'})`}
+                              >
+                                {getInstallerName(bd.installer_id)}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {/* Booking Dots */}
+                        {dayBookings.length > 0 && (
+                          <div className="mt-1 flex flex-wrap items-center gap-1">
+                            {hasVisit && (
+                              <span className="h-2 w-2 rounded-full bg-amber-500" title="Hembesök" />
+                            )}
+                            {hasInstallation && (
+                              <span className="h-2 w-2 rounded-full bg-green-600" title="Installation" />
+                            )}
+                            {dayBookings.length > 2 && (
+                              <span className="text-xs text-gray-600">+{dayBookings.length - 2}</span>
+                            )}
+                          </div>
+                        )}
+                        {/* Booking Preview */}
+                        {dayBookings.slice(0, 2).map(booking => (
+                          <div
+                            key={booking.id}
+                            className={cn(
+                              'mt-1 truncate rounded px-1 text-xs',
+                              booking.booking_type === 'installation'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-amber-100 text-amber-900'
+                            )}
+                          >
+                            {booking.scheduled_time?.slice(0, 5)} {booking.customer_name?.split(' ')[0] || (booking.booking_type === 'installation' ? 'Inst.' : 'Besök')}
+                          </div>
+                        ))}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </CardBody>
+
+          {/* Selected Date Details */}
+          {selectedDate && (
+            <div className="border-t border-gray-200 px-5 py-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="font-semibold capitalize text-gray-900">
+                  {new Date(selectedDate).toLocaleDateString('sv-SE', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                  })}
+                </h3>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedDate(null)}>
+                  Stäng
+                </Button>
+              </div>
+              {getBookingsForDate(selectedDate).length === 0 ? (
+                <p className="text-sm text-gray-700">Inga bokningar denna dag.</p>
+              ) : (
+                <div className="space-y-2">
+                  {getBookingsForDate(selectedDate).map(booking => renderBookingCard(booking, true))}
                 </div>
               )}
             </div>
           )}
+        </Card>
+      )}
 
-          {/* Info */}
-          <div className="mt-8 bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
-            <div className="text-sm text-blue-800">
-              <strong>Tips:</strong> Du kan också skapa bokningar direkt från offertsidan via
-              &quot;Boka hembesök&quot; eller &quot;Boka installation&quot;-knapparna.
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Info */}
+      <Card>
+        <CardBody className="py-4 text-sm text-gray-700">
+          <span className="font-semibold text-gray-900">Tips:</span> Du kan också skapa bokningar direkt från offertsidan via
+          &quot;Boka hembesök&quot; eller &quot;Boka installation&quot;-knapparna.
+        </CardBody>
+      </Card>
 
       {/* Booking Modal */}
       {showBookingModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h2 className="text-xl font-semibold text-gray-800">Ny bokning</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <Card className="max-h-[90vh] w-full max-w-md overflow-y-auto shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+              <h2 className="text-lg font-semibold text-gray-900">Ny bokning</h2>
               <button
+                type="button"
                 onClick={() => setShowBookingModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="rounded-lg p-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                aria-label="Stäng"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
 
-            <div className="p-4 space-y-4">
+            <div className="space-y-4 p-5">
               {/* Quote Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-sm font-medium text-gray-700">
                   Kopplad offert (valfritt)
                 </label>
                 <select
                   value={bookingForm.quote_id}
                   onChange={(e) => setBookingForm({ ...bookingForm, quote_id: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                  className={inputCls}
                 >
                   <option value="">Ingen koppling</option>
                   {quotes.map(quote => (
@@ -770,29 +742,31 @@ export default function CalendarPage() {
 
               {/* Booking Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-sm font-medium text-gray-700">
                   Typ av bokning
                 </label>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => setBookingForm({ ...bookingForm, booking_type: 'visit' })}
-                    className={`flex-1 px-4 py-2 rounded-lg border ${
+                    className={cn(
+                      'h-10 flex-1 rounded-lg border px-4 text-sm font-semibold transition-colors',
                       bookingForm.booking_type === 'visit'
-                        ? 'bg-blue-50 border-blue-500 text-blue-700'
-                        : 'border-gray-300 text-gray-700'
-                    }`}
+                        ? 'border-amber-500 bg-amber-50 text-amber-900'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                    )}
                   >
                     Hembesök
                   </button>
                   <button
                     type="button"
                     onClick={() => setBookingForm({ ...bookingForm, booking_type: 'installation' })}
-                    className={`flex-1 px-4 py-2 rounded-lg border ${
+                    className={cn(
+                      'h-10 flex-1 rounded-lg border px-4 text-sm font-semibold transition-colors',
                       bookingForm.booking_type === 'installation'
-                        ? 'bg-green-50 border-green-500 text-green-700'
-                        : 'border-gray-300 text-gray-700'
-                    }`}
+                        ? 'border-green-600 bg-green-50 text-green-800'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                    )}
                   >
                     Installation
                   </button>
@@ -801,26 +775,26 @@ export default function CalendarPage() {
 
               {/* Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-sm font-medium text-gray-700">
                   Datum
                 </label>
                 <input
                   type="date"
                   value={bookingForm.scheduled_date}
                   onChange={(e) => setBookingForm({ ...bookingForm, scheduled_date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                  className={inputCls}
                 />
               </div>
 
               {/* Time */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-sm font-medium text-gray-700">
                   Tid
                 </label>
                 <select
                   value={bookingForm.scheduled_time}
                   onChange={(e) => setBookingForm({ ...bookingForm, scheduled_time: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                  className={inputCls}
                 >
                   {['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'].map(time => (
                     <option key={time} value={time}>{time}</option>
@@ -831,7 +805,7 @@ export default function CalendarPage() {
               {/* Installer Selection */}
               {bookingForm.booking_type === 'installation' && bookingForm.scheduled_date && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
                     Installatörer
                   </label>
                   <InstallerPicker
@@ -848,7 +822,7 @@ export default function CalendarPage() {
 
               {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-sm font-medium text-gray-700">
                   Anteckningar
                 </label>
                 <textarea
@@ -856,27 +830,20 @@ export default function CalendarPage() {
                   onChange={(e) => setBookingForm({ ...bookingForm, notes: e.target.value })}
                   rows={3}
                   placeholder="Valfria anteckningar..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                  className={inputCls}
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 p-4 border-t bg-gray-50">
-              <button
-                onClick={() => setShowBookingModal(false)}
-                className="px-4 py-2 text-gray-700 hover:text-gray-900"
-              >
+            <div className="flex justify-end gap-2 rounded-b-lg border-t border-gray-200 bg-gray-50 px-5 py-4">
+              <Button variant="secondary" onClick={() => setShowBookingModal(false)}>
                 Avbryt
-              </button>
-              <button
-                onClick={handleCreateBooking}
-                disabled={savingBooking}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400"
-              >
+              </Button>
+              <Button onClick={handleCreateBooking} disabled={savingBooking}>
                 {savingBooking ? 'Skapar...' : 'Skapa bokning'}
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         </div>
       )}
 

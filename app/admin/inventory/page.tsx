@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { PageHeader, Card, CardHeader, CardBody, Badge, StatusBadge, Button, Skeleton, cn } from '@/app/components/ui';
 
 interface Material {
   id: number;
@@ -306,328 +307,334 @@ export default function InventoryPage() {
     }
   };
 
+  const inputCls =
+    'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-600/20';
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-700">Laddar lager...</div>
+      <div className="p-6 md:p-8 max-w-7xl">
+        <PageHeader title="Lager" subtitle="Lagerstatus, väntande leveranser och historik" />
+        <Card className="mb-6">
+          <CardHeader title={<Skeleton className="h-5 w-32" />} />
+          <CardBody className="space-y-4">
+            <Skeleton className="h-28 w-full" />
+            <Skeleton className="h-28 w-full" />
+          </CardBody>
+        </Card>
+        <Card className="mb-6">
+          <CardHeader title={<Skeleton className="h-5 w-48" />} />
+          <CardBody className="space-y-3">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+          </CardBody>
+        </Card>
+        <Card>
+          <CardHeader title={<Skeleton className="h-5 w-36" />} />
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-800 mb-8">Lager</h1>
+    <div className="p-6 md:p-8 max-w-7xl">
+      <PageHeader
+        title="Lager"
+        subtitle="Lagerstatus, väntande leveranser och historik"
+        actions={<Button onClick={() => openDeliveryModal()}>Ny leverans</Button>}
+      />
 
-          {message && (
-            <div className="mb-6 p-4 bg-green-100 text-green-700 rounded-lg">
-              {message}
+      {message && (
+        <div className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
+          {message}
+        </div>
+      )}
+
+      {/* Stock Overview */}
+      <Card className="mb-6">
+        <CardHeader title="Lagerstatus" />
+        <CardBody>
+          {materials.length === 0 ? (
+            <div className="py-8 text-center text-gray-700">
+              Inga material hittades. Kör databasen migreringen först.
             </div>
-          )}
-
-          {/* Stock Overview */}
-          <div className="bg-white rounded-lg shadow mb-8">
-            <div className="p-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-800">Lagerstatus</h2>
-            </div>
-            <div className="p-6">
-              {materials.length === 0 ? (
-                <div className="text-gray-700 text-center py-8">
-                  Inga material hittades. Kör databasen migreringen först.
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {materials.map((material) => (
-                    <div
-                      key={material.id}
-                      className={`p-4 rounded-lg border ${
-                        material.is_low ? 'border-red-300 bg-red-50' : 'border-gray-200'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <h3 className="font-semibold text-gray-800">{material.name}</h3>
-                          {material.sku && (
-                            <div className="text-sm text-gray-700">SKU: {material.sku}</div>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <div className={`text-2xl font-bold ${material.is_low ? 'text-red-600' : 'text-gray-800'}`}>
-                            {material.current_stock} {material.unit}
-                          </div>
-                          {material.is_low && (
-                            <div className="text-sm text-red-600 font-medium">
-                              Under minimigräns!
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Projections */}
-                      <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
-                        <div className="bg-gray-50 rounded p-3">
-                          <div className="text-gray-700">Om 7 dagar</div>
-                          <div className={`font-semibold ${material.stock_in_7_days < 0 ? 'text-red-600' : 'text-gray-800'}`}>
-                            {material.stock_in_7_days} {material.unit}
-                          </div>
-                          <div className="text-xs text-gray-700">
-                            -{material.reserved_7_days} bokat, +{material.incoming_7_days} leverans
-                          </div>
-                        </div>
-                        <div className="bg-gray-50 rounded p-3">
-                          <div className="text-gray-700">Om 30 dagar</div>
-                          <div className={`font-semibold ${material.stock_in_30_days < 0 ? 'text-red-600' : 'text-gray-800'}`}>
-                            {material.stock_in_30_days} {material.unit}
-                          </div>
-                          <div className="text-xs text-gray-700">
-                            -{material.reserved_30_days} bokat, +{material.incoming_30_days} leverans
-                          </div>
-                        </div>
-                        <div className="bg-gray-50 rounded p-3">
-                          <div className="text-gray-700">Minimigräns</div>
-                          <input
-                            type="number"
-                            defaultValue={material.minimum_stock}
-                            onBlur={(e) => {
-                              const val = parseFloat(e.target.value);
-                              if (val !== material.minimum_stock) {
-                                updateMinimumStock(material.id, val);
-                              }
-                            }}
-                            className="w-full px-2 py-1 border rounded text-gray-800 text-sm"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Stock Adjustment */}
-                      {adjusting === material.id ? (
-                        <div className="flex gap-2 items-end">
-                          <div className="flex-1">
-                            <label className="block text-sm text-gray-700 mb-1">Justera lager</label>
-                            <input
-                              type="number"
-                              value={adjustAmount}
-                              onChange={(e) => setAdjustAmount(e.target.value)}
-                              placeholder="+100 eller -50"
-                              className="w-full px-3 py-2 border rounded text-gray-800"
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <label className="block text-sm text-gray-700 mb-1">Anteckning</label>
-                            <input
-                              type="text"
-                              value={adjustNotes}
-                              onChange={(e) => setAdjustNotes(e.target.value)}
-                              placeholder="Anledning..."
-                              className="w-full px-3 py-2 border rounded text-gray-800"
-                            />
-                          </div>
-                          <button
-                            onClick={() => adjustStock(material.id)}
-                            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-                          >
-                            Spara
-                          </button>
-                          <button
-                            onClick={() => {
-                              setAdjusting(null);
-                              setAdjustAmount('');
-                              setAdjustNotes('');
-                            }}
-                            className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400"
-                          >
-                            Avbryt
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setAdjusting(material.id)}
-                          className="text-sm text-blue-600 hover:text-blue-800"
-                        >
-                          Justera lager
-                        </button>
+          ) : (
+            <div className="space-y-4">
+              {materials.map((material) => (
+                <div
+                  key={material.id}
+                  className={cn(
+                    'rounded-lg border p-4',
+                    material.is_low ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                  )}
+                >
+                  <div className="mb-4 flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-gray-900">{material.name}</h3>
+                      {material.sku && (
+                        <div className="text-sm text-gray-600">SKU: {material.sku}</div>
                       )}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
+                      <div className={cn('text-2xl font-bold leading-none', material.is_low ? 'text-red-700' : 'text-gray-900')}>
+                        {material.current_stock} {material.unit}
+                      </div>
+                      {material.is_low && <Badge variant="danger">Under minimigräns</Badge>}
+                    </div>
+                  </div>
 
-          {/* Incoming Shipments */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-800">Väntande leveranser</h2>
-              <button
-                onClick={() => openDeliveryModal()}
-                className="text-sm bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700 font-medium"
-              >
-                + Ny leverans
-              </button>
-            </div>
-            <div className="p-6">
-              {shipments.length === 0 ? (
-                <div className="text-gray-700 text-center py-4">
-                  Inga väntande leveranser.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {shipments.map((shipment) => (
-                    <div
-                      key={shipment.id}
-                      className="p-3 border rounded"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="font-medium text-gray-800">{shipment.supplier || 'Okänd leverantör'}</div>
-                          {shipment.order_number && (
-                            <div className="text-sm text-gray-700">Order: {shipment.order_number}</div>
-                          )}
-                          {/* Shipment items */}
-                          {shipment.shipment_items && shipment.shipment_items.length > 0 && (
-                            <div className="mt-2 text-sm text-gray-600">
-                              {shipment.shipment_items.map(item => (
-                                <div key={item.id}>
-                                  {item.quantity} {item.materials?.unit || 'st'} {item.materials?.name || `Material #${item.material_id}`}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <div className="text-gray-800">
-                            {new Date(shipment.expected_date).toLocaleDateString('sv-SE')}
-                          </div>
-                          <div className="text-sm text-gray-700 capitalize mb-2">{shipment.status}</div>
-                          {shipment.status !== 'received' && (
-                            <div className="flex gap-2 justify-end">
-                              <button
-                                onClick={() => openDeliveryModal(shipment)}
-                                className="text-sm bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200"
-                              >
-                                Redigera
-                              </button>
-                              <button
-                                onClick={() => handleReceiveShipment(shipment.id)}
-                                disabled={receivingShipment === shipment.id}
-                                className="text-sm bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 disabled:bg-gray-400"
-                              >
-                                {receivingShipment === shipment.id ? 'Tar emot...' : 'Mottagen'}
-                              </button>
-                              <button
-                                onClick={() => handleDeleteShipment(shipment.id)}
-                                disabled={deletingShipment === shipment.id}
-                                className="text-sm bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200 disabled:bg-gray-400"
-                              >
-                                {deletingShipment === shipment.id ? '...' : 'Ta bort'}
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                  {/* Projections */}
+                  <div className="mb-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+                    <div className={cn('rounded-lg p-3', material.is_low ? 'bg-white' : 'bg-gray-50')}>
+                      <div className="text-gray-600">Om 7 dagar</div>
+                      <div className={cn('font-semibold', material.stock_in_7_days < 0 ? 'text-red-700' : 'text-gray-900')}>
+                        {material.stock_in_7_days} {material.unit}
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        -{material.reserved_7_days} bokat, +{material.incoming_7_days} leverans
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-          {/* History Section */}
-          <div className="bg-white rounded-lg shadow mt-8">
-            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-800">Lagerhistorik</h2>
-              <button
-                onClick={() => {
-                  if (!showHistory) loadHistory();
-                  setShowHistory(!showHistory);
-                }}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-              >
-                {showHistory ? 'Dölj historik' : 'Visa historik'}
-              </button>
-            </div>
-            {showHistory && (
-              <div className="p-6">
-                {historyLoading ? (
-                  <div className="text-gray-700 text-center py-4">Laddar historik...</div>
-                ) : history.length === 0 ? (
-                  <div className="text-gray-700 text-center py-4">Ingen historik ännu.</div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b text-left">
-                          <th className="pb-2 text-gray-700 font-medium">Datum</th>
-                          <th className="pb-2 text-gray-700 font-medium">Material</th>
-                          <th className="pb-2 text-gray-700 font-medium">Typ</th>
-                          <th className="pb-2 text-gray-700 font-medium text-right">Ändring</th>
-                          <th className="pb-2 text-gray-700 font-medium">Anteckning</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {history.map((entry) => (
-                          <tr key={entry.id} className="border-b border-gray-100">
-                            <td className="py-2 text-gray-800">
-                              {new Date(entry.created_at).toLocaleString('sv-SE', {
-                                day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-                              })}
-                            </td>
-                            <td className="py-2 text-gray-800">{entry.material_name}</td>
-                            <td className="py-2">
-                              <span className={`px-1.5 py-0.5 rounded text-xs ${
-                                entry.transaction_type === 'received' ? 'bg-green-100 text-green-700'
-                                  : entry.transaction_type === 'consumed' ? 'bg-red-100 text-red-700'
-                                  : 'bg-gray-100 text-gray-700'
-                              }`}>
-                                {entry.transaction_type === 'received' ? 'Leverans'
-                                  : entry.transaction_type === 'consumed' ? 'Förbrukat'
-                                  : entry.transaction_type === 'adjustment' ? 'Justering'
-                                  : entry.transaction_type}
-                              </span>
-                            </td>
-                            <td className={`py-2 text-right font-medium ${
-                              entry.quantity > 0 ? 'text-green-700' : 'text-red-700'
-                            }`}>
-                              {entry.quantity > 0 ? '+' : ''}{entry.quantity} {entry.material_unit}
-                            </td>
-                            <td className="py-2 text-gray-600">{entry.notes || '-'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <div className={cn('rounded-lg p-3', material.is_low ? 'bg-white' : 'bg-gray-50')}>
+                      <div className="text-gray-600">Om 30 dagar</div>
+                      <div className={cn('font-semibold', material.stock_in_30_days < 0 ? 'text-red-700' : 'text-gray-900')}>
+                        {material.stock_in_30_days} {material.unit}
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        -{material.reserved_30_days} bokat, +{material.incoming_30_days} leverans
+                      </div>
+                    </div>
+                    <div className={cn('rounded-lg p-3', material.is_low ? 'bg-white' : 'bg-gray-50')}>
+                      <div className="mb-1 text-gray-600">Minimigräns</div>
+                      <input
+                        type="number"
+                        defaultValue={material.minimum_stock}
+                        onBlur={(e) => {
+                          const val = parseFloat(e.target.value);
+                          if (val !== material.minimum_stock) {
+                            updateMinimumStock(material.id, val);
+                          }
+                        }}
+                        className={cn(inputCls, 'w-full py-1')}
+                      />
+                    </div>
                   </div>
-                )}
+
+                  {/* Stock Adjustment */}
+                  {adjusting === material.id ? (
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                      <div className="flex-1">
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Justera lager</label>
+                        <input
+                          type="number"
+                          value={adjustAmount}
+                          onChange={(e) => setAdjustAmount(e.target.value)}
+                          placeholder="+100 eller -50"
+                          className={cn(inputCls, 'w-full')}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Anteckning</label>
+                        <input
+                          type="text"
+                          value={adjustNotes}
+                          onChange={(e) => setAdjustNotes(e.target.value)}
+                          placeholder="Anledning..."
+                          className={cn(inputCls, 'w-full')}
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button onClick={() => adjustStock(material.id)}>Spara</Button>
+                        <Button
+                          variant="secondary"
+                          onClick={() => {
+                            setAdjusting(null);
+                            setAdjustAmount('');
+                            setAdjustNotes('');
+                          }}
+                        >
+                          Avbryt
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button variant="ghost" size="sm" className="-ml-3" onClick={() => setAdjusting(material.id)}>
+                      Justera lager
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardBody>
+      </Card>
+
+      {/* Incoming Shipments */}
+      <Card className="mb-6">
+        <CardHeader title="Väntande leveranser" />
+        <CardBody>
+          {shipments.length === 0 ? (
+            <div className="py-4 text-center text-gray-700">Inga väntande leveranser.</div>
+          ) : (
+            <div className="space-y-3">
+              {shipments.map((shipment) => (
+                <div key={shipment.id} className="rounded-lg border border-gray-200 p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="font-medium text-gray-900">{shipment.supplier || 'Okänd leverantör'}</div>
+                      {shipment.order_number && (
+                        <div className="text-sm text-gray-600">Order: {shipment.order_number}</div>
+                      )}
+                      {/* Shipment items */}
+                      {shipment.shipment_items && shipment.shipment_items.length > 0 && (
+                        <div className="mt-2 space-y-0.5 text-sm text-gray-700">
+                          {shipment.shipment_items.map(item => (
+                            <div key={item.id}>
+                              {item.quantity} {item.materials?.unit || 'st'} {item.materials?.name || `Material #${item.material_id}`}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-900">
+                          {new Date(shipment.expected_date).toLocaleDateString('sv-SE')}
+                        </span>
+                        <StatusBadge status={shipment.status} />
+                      </div>
+                      {shipment.status !== 'received' && (
+                        <div className="flex flex-wrap gap-2">
+                          <Button size="sm" variant="secondary" onClick={() => openDeliveryModal(shipment)}>
+                            Redigera
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleReceiveShipment(shipment.id)}
+                            disabled={receivingShipment === shipment.id}
+                          >
+                            {receivingShipment === shipment.id ? 'Tar emot...' : 'Mottagen'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            onClick={() => handleDeleteShipment(shipment.id)}
+                            disabled={deletingShipment === shipment.id}
+                          >
+                            {deletingShipment === shipment.id ? '...' : 'Ta bort'}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardBody>
+      </Card>
+
+      {/* History Section */}
+      <Card>
+        <CardHeader
+          title="Lagerhistorik"
+          action={
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (!showHistory) loadHistory();
+                setShowHistory(!showHistory);
+              }}
+            >
+              {showHistory ? 'Dölj historik' : 'Visa historik'}
+            </Button>
+          }
+        />
+        {showHistory && (
+          <CardBody>
+            {historyLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            ) : history.length === 0 ? (
+              <div className="py-4 text-center text-gray-700">Ingen historik ännu.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200 text-left">
+                      <th className="pb-2 pr-4 text-xs font-semibold uppercase tracking-wide text-gray-600">Datum</th>
+                      <th className="pb-2 pr-4 text-xs font-semibold uppercase tracking-wide text-gray-600">Material</th>
+                      <th className="pb-2 pr-4 text-xs font-semibold uppercase tracking-wide text-gray-600">Typ</th>
+                      <th className="pb-2 pr-4 text-right text-xs font-semibold uppercase tracking-wide text-gray-600">Ändring</th>
+                      <th className="pb-2 text-xs font-semibold uppercase tracking-wide text-gray-600">Anteckning</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {history.map((entry) => (
+                      <tr key={entry.id} className="border-b border-gray-100">
+                        <td className="py-2 pr-4 text-gray-900">
+                          {new Date(entry.created_at).toLocaleString('sv-SE', {
+                            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+                          })}
+                        </td>
+                        <td className="py-2 pr-4 text-gray-900">{entry.material_name}</td>
+                        <td className="py-2 pr-4">
+                          <Badge
+                            variant={
+                              entry.transaction_type === 'received' ? 'success'
+                                : entry.transaction_type === 'consumed' ? 'danger'
+                                : 'neutral'
+                            }
+                          >
+                            {entry.transaction_type === 'received' ? 'Leverans'
+                              : entry.transaction_type === 'consumed' ? 'Förbrukat'
+                              : entry.transaction_type === 'adjustment' ? 'Justering'
+                              : entry.transaction_type}
+                          </Badge>
+                        </td>
+                        <td className={cn('py-2 pr-4 text-right font-medium', entry.quantity > 0 ? 'text-green-700' : 'text-red-700')}>
+                          {entry.quantity > 0 ? '+' : ''}{entry.quantity} {entry.material_unit}
+                        </td>
+                        <td className="py-2 text-gray-700">{entry.notes || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
-          </div>
-        </div>
-      </div>
+          </CardBody>
+        )}
+      </Card>
 
       {/* Delivery Modal */}
       {showDeliveryModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white">
-              <h2 className="text-xl font-semibold text-gray-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <Card className="max-h-[90vh] w-full max-w-lg overflow-y-auto shadow-xl">
+            <div className="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-5 py-4">
+              <h2 className="text-lg font-semibold text-gray-900">
                 {editingShipment ? 'Redigera leverans' : 'Ny leverans'}
               </h2>
               <button
+                type="button"
                 onClick={() => {
                   setShowDeliveryModal(false);
                   setEditingShipment(null);
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="rounded-lg p-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                aria-label="Stäng"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
 
-            <div className="p-4 space-y-4">
+            <div className="space-y-4 p-5">
               {/* Supplier */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-sm font-medium text-gray-700">
                   Leverantör
                 </label>
                 <input
@@ -635,13 +642,13 @@ export default function InventoryPage() {
                   value={deliveryForm.supplier}
                   onChange={(e) => setDeliveryForm({ ...deliveryForm, supplier: e.target.value })}
                   placeholder="T.ex. Huntsman"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                  className={cn(inputCls, 'w-full')}
                 />
               </div>
 
               {/* Order Number */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-sm font-medium text-gray-700">
                   Ordernummer
                 </label>
                 <input
@@ -649,35 +656,35 @@ export default function InventoryPage() {
                   value={deliveryForm.order_number}
                   onChange={(e) => setDeliveryForm({ ...deliveryForm, order_number: e.target.value })}
                   placeholder="T.ex. PO-2024-001"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                  className={cn(inputCls, 'w-full')}
                 />
               </div>
 
               {/* Expected Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-sm font-medium text-gray-700">
                   Förväntat leveransdatum
                 </label>
                 <input
                   type="date"
                   value={deliveryForm.expected_date}
                   onChange={(e) => setDeliveryForm({ ...deliveryForm, expected_date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                  className={cn(inputCls, 'w-full')}
                 />
               </div>
 
               {/* Materials */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="mb-2 block text-sm font-medium text-gray-700">
                   Material
                 </label>
                 <div className="space-y-2">
                   {deliveryItems.map((item, index) => (
-                    <div key={index} className="flex gap-2 items-center">
+                    <div key={index} className="flex items-center gap-2">
                       <select
                         value={item.material_id}
                         onChange={(e) => updateDeliveryItem(index, 'material_id', parseInt(e.target.value))}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                        className={cn(inputCls, 'flex-1')}
                       >
                         <option value={0}>Välj material...</option>
                         {materials.map(mat => (
@@ -691,30 +698,24 @@ export default function InventoryPage() {
                         value={item.quantity || ''}
                         onChange={(e) => updateDeliveryItem(index, 'quantity', parseFloat(e.target.value) || 0)}
                         placeholder="Antal"
-                        className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                        className={cn(inputCls, 'w-24')}
                       />
                       {deliveryItems.length > 1 && (
-                        <button
-                          onClick={() => removeDeliveryItem(index)}
-                          className="text-red-500 hover:text-red-700 px-2"
-                        >
+                        <Button variant="secondary" size="sm" onClick={() => removeDeliveryItem(index)}>
                           Ta bort
-                        </button>
+                        </Button>
                       )}
                     </div>
                   ))}
                 </div>
-                <button
-                  onClick={addDeliveryItem}
-                  className="mt-2 text-sm text-green-600 hover:text-green-700 font-medium"
-                >
-                  + Lägg till material
-                </button>
+                <Button variant="ghost" size="sm" className="mt-2 -ml-3" onClick={addDeliveryItem}>
+                  Lägg till material
+                </Button>
               </div>
 
               {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-sm font-medium text-gray-700">
                   Anteckningar
                 </label>
                 <textarea
@@ -722,30 +723,26 @@ export default function InventoryPage() {
                   onChange={(e) => setDeliveryForm({ ...deliveryForm, notes: e.target.value })}
                   rows={2}
                   placeholder="Valfria anteckningar..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                  className={cn(inputCls, 'w-full')}
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 p-4 border-t bg-gray-50">
-              <button
+            <div className="flex justify-end gap-2 rounded-b-lg border-t border-gray-200 bg-gray-50 px-5 py-4">
+              <Button
+                variant="secondary"
                 onClick={() => {
                   setShowDeliveryModal(false);
                   setEditingShipment(null);
                 }}
-                className="px-4 py-2 text-gray-700 hover:text-gray-900"
               >
                 Avbryt
-              </button>
-              <button
-                onClick={handleSaveDelivery}
-                disabled={savingDelivery}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400"
-              >
+              </Button>
+              <Button onClick={handleSaveDelivery} disabled={savingDelivery}>
                 {savingDelivery ? 'Sparar...' : (editingShipment ? 'Spara ändringar' : 'Skapa leverans')}
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         </div>
       )}
     </div>

@@ -3,6 +3,15 @@ import LogoutButton from '@/app/admin/LogoutButton';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
+const NAV_LINKS = [
+  { href: '/installer', label: 'Dashboard' },
+  { href: '/installer/bookings', label: 'Bokningar' },
+  { href: '/installer/calendar', label: 'Kalender' },
+  { href: '/installer/profile', label: 'Min profil' },
+];
+
+const navLinkCls = 'text-sm font-medium text-green-100 hover:text-white transition-colors whitespace-nowrap';
+
 export default async function InstallerLayout({
   children,
 }: {
@@ -19,49 +28,40 @@ export default async function InstallerLayout({
     : user?.email;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-6">
-              <Link href="/installer" className="text-lg font-semibold text-gray-800 hover:text-gray-600">
-                Intellifoam
-              </Link>
-              <nav className="hidden md:flex items-center gap-4">
-                <Link href="/installer" className="text-sm text-gray-600 hover:text-gray-900">
-                  Dashboard
+    <div className="min-h-screen bg-surface">
+      <header className="bg-green-900 text-white">
+        <div className="px-4 md:px-6 h-14 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-6 min-w-0">
+            <Link href="/installer" className="flex items-center gap-2.5 shrink-0">
+              <span className="w-6 h-6 rounded-md bg-green-700 inline-block" />
+              <span className="text-[16px] font-bold text-white tracking-tight">IntelliFoam</span>
+            </Link>
+            <nav className="hidden md:flex items-center gap-5">
+              {NAV_LINKS.map((l) => (
+                <Link key={l.href} href={l.href} className={navLinkCls}>
+                  {l.label}
                 </Link>
-                <Link href="/installer/bookings" className="text-sm text-gray-600 hover:text-gray-900">
-                  Bokningar
-                </Link>
-                <Link href="/installer/calendar" className="text-sm text-gray-600 hover:text-gray-900">
-                  Kalender
-                </Link>
-                <Link href="/installer/profile" className="text-sm text-gray-600 hover:text-gray-900">
-                  Min profil
-                </Link>
-              </nav>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-700">{displayName}</span>
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">
-                Installatör
-              </span>
-              <LogoutButton />
-            </div>
+              ))}
+            </nav>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="hidden sm:inline text-sm text-green-100 truncate max-w-[200px]">{displayName}</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wide bg-white/10 text-green-100 px-2 py-0.5 rounded-full">
+              Installatör
+            </span>
+            <LogoutButton />
           </div>
         </div>
-      </div>
 
-      {/* Mobile Navigation */}
-      <div className="md:hidden bg-white border-b border-gray-200 px-4 py-2">
-        <nav className="flex items-center gap-4">
-          <Link href="/installer" className="text-sm text-gray-600 hover:text-gray-900">Dashboard</Link>
-          <Link href="/installer/bookings" className="text-sm text-gray-600 hover:text-gray-900">Bokningar</Link>
-          <Link href="/installer/calendar" className="text-sm text-gray-600 hover:text-gray-900">Kalender</Link>
-          <Link href="/installer/profile" className="text-sm text-gray-600 hover:text-gray-900">Profil</Link>
+        {/* Mobile Navigation */}
+        <nav className="md:hidden flex items-center gap-5 px-4 h-11 border-t border-white/10 overflow-x-auto">
+          {NAV_LINKS.map((l) => (
+            <Link key={l.href} href={l.href} className={navLinkCls}>
+              {l.href === '/installer/profile' ? 'Profil' : l.label}
+            </Link>
+          ))}
         </nav>
-      </div>
+      </header>
 
       {children}
     </div>

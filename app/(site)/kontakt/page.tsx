@@ -94,13 +94,13 @@ function ContactPageContent() {
   };
 
   return (
-    <div className="py-16 bg-gray-50">
+    <div className="py-14 md:py-16 bg-white">
       <div className="container mx-auto px-4">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl font-bold text-center mb-4 text-gray-800">
+          <h1 className="text-4xl md:text-5xl font-bold text-center mb-4 text-gray-900">
             {calculationData ? 'Begär Offert' : 'Kontakta Oss'}
           </h1>
-          <p className="text-xl text-center text-gray-900 mb-12">
+          <p className="text-lg text-center text-gray-700 mb-12">
             {calculationData
               ? 'Granska din beräkning och skicka in för en exakt offert'
               : 'Få en kostnadsfri konsultation och offert för ditt projekt'
@@ -109,7 +109,7 @@ function ContactPageContent() {
 
           {/* Calculation Summary Panel */}
           {calculationData && (
-            <div className="bg-white rounded-lg shadow-md p-8 mb-8">
+            <div className="bg-white rounded-lg border border-gray-200 p-8 mb-8">
               <h2 className="text-2xl font-semibold mb-4 text-gray-900">Din Beräkning</h2>
 
               {/* Building parts summary */}
@@ -155,7 +155,7 @@ function ContactPageContent() {
                     <span className="font-medium text-gray-900">{calculationData.totals.vat.toLocaleString('sv-SE')} kr</span>
                   </div>
                   {calculationData.totals.rotDeduction > 0 && (
-                    <div className="flex justify-between text-blue-700">
+                    <div className="flex justify-between text-green-700">
                       <span>ROT-avdrag:</span>
                       <span className="font-medium">- {calculationData.totals.rotDeduction.toLocaleString('sv-SE')} kr</span>
                     </div>
@@ -183,7 +183,7 @@ function ContactPageContent() {
 
           <div className="grid md:grid-cols-2 gap-8">
             {/* Contact Form */}
-            <div className="bg-white rounded-lg shadow-md p-8">
+            <div className="bg-white rounded-lg border border-gray-200 p-8">
               <h2 className="text-2xl font-semibold mb-6 text-gray-900">
                 {calculationData ? 'Dina Uppgifter' : 'Skicka en förfrågan'}
               </h2>
@@ -322,7 +322,7 @@ function ContactPageContent() {
 
             {/* Contact Information */}
             <div>
-              <div className="bg-white rounded-lg shadow-md p-8 mb-6">
+              <div className="bg-white rounded-lg border border-gray-200 p-8 mb-6">
                 <h2 className="text-2xl font-semibold mb-6 text-gray-900">Kontaktinformation</h2>
                 <div className="space-y-4">
                   <div>
@@ -367,7 +367,7 @@ function ContactPageContent() {
 // Loading fallback for Suspense
 function ContactPageFallback() {
   return (
-    <div className="py-16 bg-gray-50 min-h-screen flex items-center justify-center">
+    <div className="py-16 bg-white min-h-[60vh] flex items-center justify-center">
       <div className="text-gray-600">Laddar...</div>
     </div>
   );
