@@ -1,6 +1,9 @@
 import { getAllProjects } from '@/lib/queries';
 import Image from 'next/image';
 
+// Render fresh so newly published gallery projects appear immediately.
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Projektgalleri - Sprutisolering | Intellifoam',
   description: 'Se våra genomförda projekt inom sprutisolering. Före och efter bilder från villa, kommersiella byggnader och lantbruk.',
