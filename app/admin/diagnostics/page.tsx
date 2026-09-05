@@ -27,6 +27,7 @@ const selectCls =
 
 export default function DiagnosticsPage() {
   const [logs, setLogs] = useState<NotificationLog[]>([]);
+  const [logError, setLogError] = useState<string | null>(null);
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [filterChannel, setFilterChannel] = useState('');
@@ -48,6 +49,7 @@ export default function DiagnosticsPage() {
       if (res.ok) {
         const data = await res.json();
         setLogs(data.logs || []);
+        setLogError(data.log_error || null);
         setSystemStatus(data.status || null);
       }
     } catch (err) {
@@ -208,6 +210,11 @@ export default function DiagnosticsPage() {
       {/* Notification Log */}
       <Card className="overflow-hidden">
         <CardHeader title="Notifieringslogg" />
+        {logError && (
+          <div className="mx-6 mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Loggtabellen kunde inte läsas ({logError}). Kör migrationen <code className="font-mono">supabase/migrations/add-notification-log.sql</code> i Supabase SQL Editor för att aktivera loggen.
+          </div>
+        )}
         {logs.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full">

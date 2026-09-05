@@ -30,16 +30,17 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await query;
 
+    // System status must not depend on the log table existing
+    const emailConfigured = !!(process.env.SMTP_USER && process.env.SMTP_PASS);
+    const discordConfigured = !!(process.env.DISCORD_WEBHOOK_URL || (process.env.DISCORD_BOT_TOKEN && process.env.DISCORD_CHANNEL_ID));
+
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('Diagnostics: notification_log query failed:', error.message);
     }
 
-    // Get system status
-    const emailConfigured = !!(process.env.SMTP_USER && process.env.SMTP_PASS);
-    const discordConfigured = !!process.env.DISCORD_WEBHOOK_URL;
-
     return NextResponse.json({
-      logs: data || [],
+      logs: error ? [] : data || [],
+      log_error: error ? error.message : null,
       status: {
         email_configured: emailConfigured,
         discord_configured: discordConfigured,
